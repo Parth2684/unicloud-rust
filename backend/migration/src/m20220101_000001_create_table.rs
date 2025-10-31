@@ -8,13 +8,12 @@ impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         // Replace the sample below with your own migration scripts
         todo!();
-
         manager
             .create_table(
                 Table::create()
-                    .table(User::Table)
+                    .table(Post::Table)
                     .if_not_exists()
-                    .col(pk_auto(User::Id)
+                    .col(pk_auto(Post::Id)
                         
                     )
                     .col(string(Post::Title))
