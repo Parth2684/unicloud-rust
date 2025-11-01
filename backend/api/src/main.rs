@@ -5,8 +5,8 @@ use axum::{
 
 #[tokio::main]
 async fn main() {
-    let add = Router::<()>::new()
+    let _add = Router::<()>::new()
         .route("/", get(|| async { "Hello World" }));
     
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
+    let _listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
 }
