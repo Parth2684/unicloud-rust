@@ -1,0 +1,9 @@
+{
+  "generate": {
+    "entity": {
+      "lib": true,
+      "serde": "both",
+      "output_dir": "entity/src"
+    }
+  }
+}
