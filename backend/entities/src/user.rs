@@ -14,10 +14,26 @@ pub struct Model {
     pub created_at: DateTime,
     pub name: String,
     pub image: Option<String>,
-    pub quota_type: QuotaType,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {}
+pub enum Relation {
+    #[sea_orm(has_many = "super::cloud_account::Entity")]
+    CloudAccount,
+    #[sea_orm(has_many = "super::quota::Entity")]
+    Quota,
+}
+
+impl Related<super::cloud_account::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::CloudAccount.def()
+    }
+}
+
+impl Related<super::quota::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Quota.def()
+    }
+}
 
 impl ActiveModelBehavior for ActiveModel {}

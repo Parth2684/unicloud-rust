@@ -1,6 +1,8 @@
 [workspace]
 resolver = "3"
-members = ["api", "entity", "migration"]
+members = ["api", "entities", "migration"]
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
+entity = { path = "entity" }
+migration = { path = "migration" } 

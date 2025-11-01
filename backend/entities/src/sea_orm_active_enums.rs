@@ -4,6 +4,14 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
+#[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "provider")]
+pub enum Provider {
+    #[sea_orm(string_value = "Google")]
+    Google,
+    #[sea_orm(string_value = "Mega")]
+    Mega,
+}
+#[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize)]
 #[sea_orm(rs_type = "String", db_type = "Enum", enum_name = "quota_type")]
 pub enum QuotaType {
     #[sea_orm(string_value = "Free")]
