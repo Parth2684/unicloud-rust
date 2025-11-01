@@ -4,5 +4,5 @@ members = ["api", "entities", "migration"]
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
-entity = { path = "entity" }
+entity = { path = "entities" }
 migration = { path = "migration" } 
