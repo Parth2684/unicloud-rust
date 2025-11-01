@@ -85,7 +85,7 @@ impl MigrationTrait for Migration {
                             .unique_key()
                             .uuid(),
                     )
-                    .col(ColumnDef::new(Quota::UserId).uuid().not_null())
+                    .col(ColumnDef::new(Quota::UserId).uuid().not_null().unique_key())
                     .col(
                         ColumnDef::new(Quota::FreeQuota)
                             .float()

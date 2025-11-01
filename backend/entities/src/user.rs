@@ -20,7 +20,7 @@ pub struct Model {
 pub enum Relation {
     #[sea_orm(has_many = "super::cloud_account::Entity")]
     CloudAccount,
-    #[sea_orm(has_many = "super::quota::Entity")]
+    #[sea_orm(has_many = "super::quota::Entity", has_one = "super::quota::Entity")]
     Quota,
 }
 
