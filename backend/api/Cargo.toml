@@ -13,4 +13,5 @@ sea-orm = { version = "2.0.0-rc.16", features = [ "sqlx-postgres", "runtime-asyn
 futures = "0.3.31"
 once_cell = "1.21.3"
 log = "0.4.28"
+entities = { workspace = true }
 

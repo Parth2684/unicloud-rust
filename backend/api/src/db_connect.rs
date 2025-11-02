@@ -5,7 +5,8 @@ use crate::export_envs::ENVS;
 
 pub async fn db_connect() -> Result<DatabaseConnection, DbErr> {
     let mut opt = ConnectOptions::new(&ENVS.database_url);
-    opt.max_connections(100)
+    opt
+        .max_connections(100)
         .min_connections(5)
         .connect_timeout(Duration::from_secs(8))
         .acquire_timeout(Duration::from_secs(8))

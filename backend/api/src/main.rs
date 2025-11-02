@@ -1,8 +1,7 @@
-use axum::{Router, routing::get};
-
-use crate::db_connect::db_connect;
+use axum::{Router, routing::get};use crate::db_connect::db_connect;
 mod db_connect;
 mod export_envs;
+
 
 #[tokio::main]
 async fn main() {
