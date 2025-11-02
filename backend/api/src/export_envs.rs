@@ -1,12 +1,13 @@
-use std::error::Error;
-use std::fmt::Debug;
+use once_cell::sync::Lazy;
 
-#[derive(Debug)]
 pub struct Envs {
     pub database_url: String,
 }
-pub fn get_envs() -> Result<Envs, Box<dyn Error>> {
-    dotenvy::dotenv()?;
-    let database_url = dotenvy::var("DATABASE_URL")?;
-    Ok(Envs { database_url })
-}
+
+
+pub static ENVS: Lazy<Envs> = Lazy::new(||{
+    dotenvy::dotenv().ok();
+    let database_url = dotenvy::var("DATABASE_URL")
+        .expect("DATABASE_URL not found in the environment");
+    Envs { database_url }
+});
