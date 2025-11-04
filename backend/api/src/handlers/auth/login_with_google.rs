@@ -1,14 +1,21 @@
 use axum::{extract::Query, response::Redirect};
+use entities::user;
+use sea_orm::ActiveValue::Set;
+use sea_orm::DbBackend;
+use sea_orm::Insert;
+use sea_orm::QueryTrait;
 use url::Url;
 use reqwest::Client;
-
-use crate::export_envs::ENVS;
-
-struct AuthRequest {
-    code: String,
-    state: String
-}
-
+use entities::user::Entity as UserEntity;
+use entities::user::Column as UserColumn;
+use crate::db_connect::init_db;
+use crate::{export_envs::ENVS};
+use sea_orm::EntityTrait;
+use sea_orm::ColumnTrait;
+use sea_orm::QueryFilter;
+use uuid::Uuid;
+use chrono::prelude::*;
+use sea_orm::ActiveModelTrait;
 
 pub fn google_auth_redirect() -> Redirect {
     let client_id = &ENVS.google_client_id;
@@ -25,12 +32,16 @@ pub fn google_auth_redirect() -> Redirect {
     match auth_url {
         Ok(url) => Redirect::to(url.as_str()),
         Err(err) => {
-            println!("{err:?}");
+            eprintln!("{err:?}");
             Redirect::to("/auth/google")
         }
     }
 }
 
+struct AuthRequest {
+    code: String,
+    state: Option<String>
+}
 
 pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
     let client = Client::new();
@@ -56,42 +67,86 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
         }
     };
     let json = res.json::<serde_json::Value>().await;
-    let json = match json {
-        Ok(val) => val,
+    let access_token = match json {
+        Ok(val) => match val.get("access_token") {
+            Some(token) => token.to_string(),
+            None => {
+                eprintln!("Access token not received");
+                return
+            }
+        },
         Err(err) => {
-            eprintln!("{err:?}"),
+            eprintln!("{err:?}");
             return
         }
     };
     
-    let access_token = json.get("access_token");
-    let access_token: String = match access_token {
-        Some(token) => token,
-        None => {
-            eprintln!("access token not received");
-            return
-        }
-    };
+    let db = init_db().await;
    
-    let user_info = client.get("https://www.googleapis.com/oauth2/v3/userinfo")
-        .bearer_auth(access_token.as_str())
+    let user_info = client.get("https://openidconnect.googleapis.com/v1/userinfo")
+        .bearer_auth(access_token)
         .send()
         .await;
     
     let user_info = match user_info {
-        Ok(info) => info,
+        Ok(info) => match info.json::<serde_json::Value>().await {
+            Ok(val) => val,
+            Err(err) => {
+                eprintln!("Error parsing user info: {err}");
+                return
+            }
+        },
         Err(err) => {
             eprintln!("{err:?}");
             return
         }
     };
     
-    let parsed_user_info = user_info.json::<serde_json::Value>().await;
-    let parsed_user_info = match parsed_user_info {
-        Ok(val) => val,
+    let email = user_info.get("email")
+        .expect("Email is required for signing in");
+    let name = user_info.get("given_name")
+        .expect("Name is required for signing in");
+    let image = user_info.get("picture")
+        .expect("Picture is required for signing in");
+    let sub = user_info.get("sub")
+        .expect("Sub should be provided from google");
+    
+    let db_user =  UserEntity::find()
+        .filter(UserColumn::Gmail.eq(email.as_str()))
+        .one(db)
+        .await; 
+    
+    let db_user = match db_user {
+        Ok(optional_user) => optional_user,
         Err(err) => {
-            eprintln!("{err:?}");
-            return 
+            println!("{err}");
+            return
         }
     };
+    
+    let final_user = match db_user {
+        Some(user) => user,
+        None => {
+            let uuidv4 = Uuid::new_v4(); 
+            let utc = Utc::now().naive_utc();
+            let insert_user = user::ActiveModel {
+                id: Set(uuidv4),
+                gmail: Set(email.to_string()),
+                created_at: Set(utc),
+                image: Set(Some(image.to_string())),
+                sub: Set(sub.to_string()),
+                name: Set(name.to_string())
+            };
+            let user:user::Model = match insert_user.insert(db).await {
+                Ok(user) => user,
+                Err(err) => {
+                    eprintln!("{err}");
+                    return
+                }
+            };
+            
+            user
+        }
+    }; 
+    
 } 

@@ -1,4 +1,3 @@
-use crate::m20220101_000001_create_table::User;
 use sea_orm_migration::prelude::{extension::postgres::Type, *};
 
 #[derive(DeriveMigrationName)]
@@ -186,4 +185,10 @@ enum Quota {
 #[derive(DeriveIden)]
 enum QuotaType {
     Table,
+}
+
+#[derive(DeriveIden)]
+enum User {
+    Table,
+    Id,
 }

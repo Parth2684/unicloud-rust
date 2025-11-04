@@ -13,6 +13,8 @@ pub struct Model {
     pub created_at: DateTime,
     pub name: String,
     pub image: Option<String>,
+    #[sea_orm(unique)]
+    pub sub: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
