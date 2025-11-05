@@ -2,9 +2,9 @@ use crate::db_connect::init_db;
 use crate::export_envs::ENVS;
 use axum::{extract::Query, response::Redirect};
 use chrono::prelude::*;
-use entities::{quota, user};
+use entities::quota::{Column as QuotaColumn, Entity as QuotaEntity};
 use entities::user::{Column as UserColumn, Entity as UserEntity};
-use entities::quota::{Entity as QuotaEntity, Column as QuotaColumn};
+use entities::{quota, user};
 use reqwest::Client;
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
@@ -139,10 +139,10 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
                 Ok(user) => user,
                 Err(err) => {
                     eprintln!("{err:?}");
-                    return
+                    return;
                 }
             };
-        },
+        }
         None => {
             let uuidv4 = Uuid::new_v4();
             let utc = Utc::now().naive_utc();
@@ -164,12 +164,12 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
             user
         }
     };
-    
+
     let user_quota = QuotaEntity::find()
         .filter(QuotaColumn::UserId.eq(final_user.id))
         .one(db)
         .await;
-    
+
     let user_quota = match user_quota {
         Ok(optional_quota) => match optional_quota {
             Some(quota) => quota,
@@ -184,11 +184,11 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
                     Ok(quota) => quota,
                     Err(err) => {
                         eprintln!("{err:?}");
-                        return
+                        return;
                     }
                 };
                 quota
             }
-        }
+        },
     };
 }

@@ -1,8 +1,8 @@
 use axum::{Router, routing::get};
+mod app_errors;
 mod db_connect;
 mod export_envs;
 mod handlers;
-mod app_errors;
 
 #[tokio::main]
 async fn main() {

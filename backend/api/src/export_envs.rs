@@ -6,7 +6,7 @@ pub struct Envs {
     pub google_client_secret: String,
     pub google_client_redirect_url: String,
     pub backend_url: String,
-    pub jwt_secret: String
+    pub jwt_secret: String,
 }
 
 pub static ENVS: Lazy<Envs> = Lazy::new(|| {

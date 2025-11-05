@@ -1,9 +1,7 @@
 use axum::Json;
-use axum::response::IntoResponse;
 use axum::http::StatusCode;
+use axum::response::IntoResponse;
 use serde_json::json;
-
-
 
 pub enum AppError {
     Unauthorised(Option<String>),
@@ -16,21 +14,33 @@ impl IntoResponse for AppError {
         match self {
             AppError::Internal(msg) => {
                 let message = msg.unwrap_or_else(|| String::from("Internal Server Error"));
-                (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({
-                    "message": message
-                }))).into_response();
-            },
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({
+                        "message": message
+                    })),
+                )
+                    .into_response();
+            }
             AppError::NotFound(msg) => {
                 let message = msg.unwrap_or_else(|| String::from("Not Found"));
-                (StatusCode::NOT_FOUND, Json(json!({
-                    "message": message
-                }))).into_response()
-            },
+                (
+                    StatusCode::NOT_FOUND,
+                    Json(json!({
+                        "message": message
+                    })),
+                )
+                    .into_response()
+            }
             AppError::Unauthorised(msg) => {
                 let message = msg.unwrap_or_else(|| String::from("Unauthorised"));
-                (StatusCode::UNAUTHORIZED, Json(json!({
-                    "message": message
-                }))).into_response()
+                (
+                    StatusCode::UNAUTHORIZED,
+                    Json(json!({
+                        "message": message
+                    })),
+                )
+                    .into_response()
             }
         }
     }

@@ -16,15 +16,15 @@ pub fn create_jwt(sub: &str, quota_type: &str) -> String {
     let claims = Claims {
         sub: sub.to_owned(),
         quota_type: quota_type.to_owned(),
-        exp: expiration
+        exp: expiration,
     };
-    
+
     let token = encode(&Header::default(), claims, &ENVS.jwt_secret);
     match token {
         Ok(token) => token,
         Err(err) => {
             eprintln!("{err:?}");
-            return 
+            return;
         }
     }
 }
@@ -35,7 +35,7 @@ pub fn decode_jwt(token: &str) -> Option<Claims> {
         Ok(data) => data,
         Err(err) => {
             eprintln!("{err:?}");
-            return
+            return;
         }
     };
 }
