@@ -1,5 +1,5 @@
 use chrono::{Duration, Offset, Utc};
-use jsonwebtoken::{Header, Validation, decode, encode};
+use jsonwebtoken::{Header, Validation, decode, encode, errors::Error};
 use serde::{Deserialize, Serialize};
 
 use crate::export_envs::ENVS;
@@ -11,7 +11,7 @@ pub struct Claims {
     pub exp: usize,
 }
 
-pub fn create_jwt(sub: &str, quota_type: &str) -> String {
+pub fn create_jwt(sub: &str, quota_type: &str) -> Result<String, Error> {
     let expiration = (Utc::now() + Duration::days(7)).unix_timestamp() as usize;
     let claims = Claims {
         sub: sub.to_owned(),
@@ -24,18 +24,19 @@ pub fn create_jwt(sub: &str, quota_type: &str) -> String {
         Ok(token) => token,
         Err(err) => {
             eprintln!("{err:?}");
-            return;
+            err
         }
     }
 }
 
-pub fn decode_jwt(token: &str) -> Option<Claims> {
+pub fn decode_jwt(token: &str) -> Result<Claims, Error> {
     let data = decode(token, &ENVS.jwt_secret, &Validation::default());
     let token = match data {
-        Ok(data) => data,
+        Ok(data) => data.claims as Claims,
         Err(err) => {
             eprintln!("{err:?}");
-            return;
+            err;
         }
     };
+    token
 }

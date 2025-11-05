@@ -1,7 +1,11 @@
 use crate::app_errors::AppError;
 use crate::db_connect::init_db;
 use crate::export_envs::ENVS;
+use crate::handlers::auth::jwt_config::create_jwt;
+use axum::Json;
 use axum::{extract::Query, response::Redirect};
+use axum_extra::extract::cookie::CookieJar;
+use axum_extra::extract::cookie::Cookie;
 use chrono::prelude::*;
 use entities::quota::{Column as QuotaColumn, Entity as QuotaEntity};
 use entities::user::{Column as UserColumn, Entity as UserEntity};
@@ -10,6 +14,7 @@ use reqwest::Client;
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
 use sea_orm::{DbBackend, Insert, QueryTrait};
+use serde_json::json;
 use url::Url;
 use uuid::Uuid;
 
@@ -18,13 +23,13 @@ pub fn google_auth_redirect() -> Redirect {
     let redirect_url = &ENVS.google_client_redirect_url;
 
     let auth_url = Url::parse_with_params(
-        "https://accounts.google.com/o/oath2/v2/auth",
+        "https://accounts.google.com/o/oauth2/v2/auth",
         &[
             ("client_id", client_id.as_str()),
             ("redirect_url", redirect_url.as_str()),
             ("response_type", "code"),
             ("scope", "openid email profile"),
-            ("acces_type", "offline"),
+            ("access_type", "offline"),
             ("prompt", "consent"),
         ],
     );
@@ -42,7 +47,7 @@ struct AuthRequest {
     state: Option<String>,
 }
 
-pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
+pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthRequest>) {
     let client = Client::new();
     let token_url = String::from("https://oauth2.googleapis.com/token");
     let client_id = &ENVS.google_client_id;
@@ -55,7 +60,7 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
             ("code", params.code.as_str()),
             ("client_id", client_id.as_str()),
             ("client_secret", client_secret.as_str()),
-            ("redirect_uri", redirect_url.as_str()),
+            ("redirect_url", redirect_url.as_str()),
             ("grant_type", "authorization_code"),
         ])
         .send()
@@ -135,15 +140,13 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
         .one(db)
         .await;
     
-    match cloud_accounts {
-        Ok(option_acc) => match option_acc {
-            Some(acc) => AppError::Forbidden("You Cannot signin to this account as it was added by another account in the file system")
-        }
-    };
+    if let Ok(Some(_)) = cloud_accounts {
+        return Err(AppError::Forbidden("You Cannot Signin with this account as it was added by a different account"));
+    }
 
     let final_user = match db_user {
         Some(user_found) => {
-            let mut update_user = user_found.into();
+            let mut update_user: user::ActiveModel = user_found.unwrap().into();
             update_user.gmail = Set(email.to_string());
             update_user.name = Set(name.to_string());
             update_user.image = Set(Some(image.to_string()));
@@ -154,6 +157,7 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
                     return AppError::Internal(String::from("Error Updating User"));
                 }
             };
+            user
         }
         None => {
             let uuidv4 = Uuid::new_v4();
@@ -182,7 +186,7 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
         .one(db)
         .await;
 
-    let user_quota = match user_quota {
+    let user_quota:quota::Model = match user_quota {
         Ok(optional_quota) => match optional_quota {
             Some(quota) => quota,
             None => {
@@ -196,7 +200,7 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
                     Ok(quota) => quota,
                     Err(err) => {
                         eprintln!("{err:?}");
-                        return;
+                        return AppError::Internal(String::from("Could not create Quota for user"));
                     }
                 };
                 quota
@@ -204,7 +208,26 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
         },
         Err(err) => {
             eprintln!("{err:?}");
-            AppError::Internal(String::from("Could not create a quota for you please try creating account again"))
+            AppError::Internal(String::from("Could not create a quota for you please try creating account again DBERR"))
+        }
+    };
+    
+    let token = create_jwt(final_user.sub, user_quota.quota_type);
+    let response = match token {
+        Ok(jwt) => {
+            let cookie = Cookie::build("auth_token", jwt);
+                .path("/")
+                .http_only(true)
+                .same_site(axum_extra::extract::cookie::SameSite::Lax)
+                .finish();
+            let jar = jar.add(cookie);
+            (jar, Json(json!({
+                "message": "Login Successful".to_string()
+            })))
+        },
+        Err(err) => {
+            eprintln!("{err:?}");
+            AppError::Internal(String::from("Could not generate token"))
         }
     };
 }
