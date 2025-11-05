@@ -1,10 +1,11 @@
+use crate::app_errors::AppError;
 use crate::db_connect::init_db;
 use crate::export_envs::ENVS;
 use axum::{extract::Query, response::Redirect};
 use chrono::prelude::*;
 use entities::quota::{Column as QuotaColumn, Entity as QuotaEntity};
 use entities::user::{Column as UserColumn, Entity as UserEntity};
-use entities::{quota, user};
+use entities::{cloud_account, quota, user};
 use reqwest::Client;
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
@@ -63,7 +64,7 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
         Ok(res) => res,
         Err(err) => {
             eprintln!("{err:?}");
-            return Err;
+            return AppError::Internal("Error while getting token".to_string());
         }
     };
     let json = res.json::<serde_json::Value>().await;
@@ -72,12 +73,12 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
             Some(token) => token.to_string(),
             None => {
                 eprintln!("Access token not received");
-                return;
+                return AppError::Internal("Access token not received".to_string());
             }
         },
         Err(err) => {
             eprintln!("{err:?}");
-            return;
+            return AppError::Internal("Couldn't Retrieve Token from Google".to_string());
         }
     };
 
@@ -94,12 +95,12 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
             Ok(val) => val,
             Err(err) => {
                 eprintln!("Error parsing user info: {err}");
-                return;
+                return AppError::Internal("Error while Parsing user info".to_string());
             }
         },
         Err(err) => {
             eprintln!("{err:?}");
-            return;
+            return AppError::Internal("Error while getting user info".to_string());
         }
     };
 
@@ -128,6 +129,17 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
             return;
         }
     };
+    
+    let cloud_accounts = cloud_account::Entity::find()
+        .filter(cloud_account::Column::Sub.eq(sub.as_str()))
+        .one(db)
+        .await;
+    
+    match cloud_accounts {
+        Ok(option_acc) => match option_acc {
+            Some(acc) => AppError::Forbidden("You Cannot signin to this account as it was added by another account in the file system")
+        }
+    };
 
     let final_user = match db_user {
         Some(user_found) => {
@@ -139,7 +151,7 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
                 Ok(user) => user,
                 Err(err) => {
                     eprintln!("{err:?}");
-                    return;
+                    return AppError::Internal(String::from("Error Updating User"));
                 }
             };
         }
@@ -158,7 +170,7 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
                 Ok(user) => user,
                 Err(err) => {
                     eprintln!("{err}");
-                    return;
+                    return AppError::Internal(String::from(String::from("Error Creating User Please try again")));
                 }
             };
             user
@@ -190,5 +202,9 @@ pub async fn google_auth_callback(Query(params): Query<AuthRequest>) {
                 quota
             }
         },
+        Err(err) => {
+            eprintln!("{err:?}");
+            AppError::Internal(String::from("Could not create a quota for you please try creating account again"))
+        }
     };
 }

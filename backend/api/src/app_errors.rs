@@ -7,6 +7,7 @@ pub enum AppError {
     Unauthorised(Option<String>),
     NotFound(Option<String>),
     Internal(Option<String>),
+    Forbidden(Option<String>),
 }
 
 impl IntoResponse for AppError {
@@ -39,6 +40,16 @@ impl IntoResponse for AppError {
                     Json(json!({
                         "message": message
                     })),
+                )
+                    .into_response()
+            }
+            AppError::Forbidden(msg) => {
+                let message = msg.unwrap_or_else(|| String::from("Forbidden"));
+                (
+                    StatusCode::FORBIDDEN,
+                    Json(json!({
+                        "message": message
+                    }))
                 )
                     .into_response()
             }
