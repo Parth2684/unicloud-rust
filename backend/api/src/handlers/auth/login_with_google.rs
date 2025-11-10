@@ -2,10 +2,10 @@ use crate::app_errors::AppError;
 use crate::db_connect::init_db;
 use crate::export_envs::ENVS;
 use crate::handlers::auth::jwt_config::create_jwt;
-use axum::Json;
+use axum::response::IntoResponse;
 use axum::{extract::Query, response::Redirect};
-use axum_extra::extract::cookie::CookieJar;
 use axum_extra::extract::cookie::Cookie;
+use axum_extra::extract::cookie::CookieJar;
 use chrono::prelude::*;
 use entities::quota::{Column as QuotaColumn, Entity as QuotaEntity};
 use entities::user::{Column as UserColumn, Entity as UserEntity};
@@ -13,12 +13,11 @@ use entities::{cloud_account, quota, user};
 use reqwest::Client;
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
-use sea_orm::{DbBackend, Insert, QueryTrait};
-use serde_json::json;
+use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
 
-pub fn google_auth_redirect() -> Redirect {
+pub async fn google_auth_redirect() -> Redirect {
     let client_id = &ENVS.google_client_id;
     let redirect_url = &ENVS.google_client_redirect_url;
 
@@ -26,7 +25,7 @@ pub fn google_auth_redirect() -> Redirect {
         "https://accounts.google.com/o/oauth2/v2/auth",
         &[
             ("client_id", client_id.as_str()),
-            ("redirect_url", redirect_url.as_str()),
+            ("redirect_uri", redirect_url.as_str()),
             ("response_type", "code"),
             ("scope", "openid email profile"),
             ("access_type", "offline"),
@@ -37,17 +36,21 @@ pub fn google_auth_redirect() -> Redirect {
         Ok(url) => Redirect::to(url.as_str()),
         Err(err) => {
             eprintln!("{err:?}");
-            Redirect::to("/auth/google")
+            Redirect::to(&format!("{}/auth/google", &ENVS.backend_url.as_str()))
         }
     }
 }
 
+#[derive(Serialize, Deserialize)]
 struct AuthRequest {
     code: String,
     state: Option<String>,
 }
 
-pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthRequest>) {
+pub async fn google_auth_callback(
+    jar: CookieJar,
+    Query(params): Query<AuthRequest>,
+) -> Result<impl IntoResponse, AppError> {
     let client = Client::new();
     let token_url = String::from("https://oauth2.googleapis.com/token");
     let client_id = &ENVS.google_client_id;
@@ -60,7 +63,7 @@ pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthReque
             ("code", params.code.as_str()),
             ("client_id", client_id.as_str()),
             ("client_secret", client_secret.as_str()),
-            ("redirect_url", redirect_url.as_str()),
+            ("redirect_uri", redirect_url.as_str()),
             ("grant_type", "authorization_code"),
         ])
         .send()
@@ -69,21 +72,23 @@ pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthReque
         Ok(res) => res,
         Err(err) => {
             eprintln!("{err:?}");
-            return AppError::Internal("Error while getting token".to_string());
+            return Err(AppError::Internal(Some("Error while getting token".to_string())));
         }
     };
     let json = res.json::<serde_json::Value>().await;
     let access_token = match json {
         Ok(val) => match val.get("access_token") {
-            Some(token) => token.to_string(),
+            Some(token) => token.as_str().unwrap_or_default().to_string(),
             None => {
                 eprintln!("Access token not received");
-                return AppError::Internal("Access token not received".to_string());
+                return Err(AppError::Internal(Some("Access token not received".to_string())));
             }
         },
         Err(err) => {
             eprintln!("{err:?}");
-            return AppError::Internal("Couldn't Retrieve Token from Google".to_string());
+            return Err(AppError::Internal(Some(
+                "Couldn't Retrieve Token from Google".to_string(),
+            )));
         }
     };
 
@@ -100,12 +105,16 @@ pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthReque
             Ok(val) => val,
             Err(err) => {
                 eprintln!("Error parsing user info: {err}");
-                return AppError::Internal("Error while Parsing user info".to_string());
+                return Err(AppError::Internal(Some(
+                    "Error while Parsing user info".to_string(),
+                )));
             }
         },
         Err(err) => {
             eprintln!("{err:?}");
-            return AppError::Internal("Error while getting user info".to_string());
+            return Err(AppError::Internal(Some(
+                "Error while getting user info".to_string(),
+            )));
         }
     };
 
@@ -131,22 +140,26 @@ pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthReque
         Ok(optional_user) => optional_user,
         Err(err) => {
             println!("{err}");
-            return;
+            return Err(AppError::Internal(Some(
+                "Database service is probably down".to_string(),
+            )));
         }
     };
-    
+
     let cloud_accounts = cloud_account::Entity::find()
         .filter(cloud_account::Column::Sub.eq(sub.as_str()))
         .one(db)
         .await;
-    
+
     if let Ok(Some(_)) = cloud_accounts {
-        return Err(AppError::Forbidden("You Cannot Signin with this account as it was added by a different account"));
+        return Err(AppError::Forbidden(Some(
+            "You Cannot Signin with this account as it was added by a different account".to_string(),
+        )));
     }
 
     let final_user = match db_user {
         Some(user_found) => {
-            let mut update_user: user::ActiveModel = user_found.unwrap().into();
+            let mut update_user: user::ActiveModel = user_found.into();
             update_user.gmail = Set(email.to_string());
             update_user.name = Set(name.to_string());
             update_user.image = Set(Some(image.to_string()));
@@ -154,7 +167,7 @@ pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthReque
                 Ok(user) => user,
                 Err(err) => {
                     eprintln!("{err:?}");
-                    return AppError::Internal(String::from("Error Updating User"));
+                    return Err(AppError::Internal(Some(String::from("Error Updating User"))));
                 }
             };
             user
@@ -174,7 +187,9 @@ pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthReque
                 Ok(user) => user,
                 Err(err) => {
                     eprintln!("{err}");
-                    return AppError::Internal(String::from(String::from("Error Creating User Please try again")));
+                    return Err(AppError::Internal(Some(String::from(String::from(
+                        "Error Creating User Please try again",
+                    )))));
                 }
             };
             user
@@ -186,7 +201,7 @@ pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthReque
         .one(db)
         .await;
 
-    let user_quota:quota::Model = match user_quota {
+    let user_quota: quota::Model = match user_quota {
         Ok(optional_quota) => match optional_quota {
             Some(quota) => quota,
             None => {
@@ -200,7 +215,9 @@ pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthReque
                     Ok(quota) => quota,
                     Err(err) => {
                         eprintln!("{err:?}");
-                        return AppError::Internal(String::from("Could not create Quota for user"));
+                        return Err(AppError::Internal(Some(String::from(
+                            "Could not create Quota for user",
+                        ))));
                     }
                 };
                 quota
@@ -208,26 +225,33 @@ pub async fn google_auth_callback(jar: CookieJar, Query(params): Query<AuthReque
         },
         Err(err) => {
             eprintln!("{err:?}");
-            AppError::Internal(String::from("Could not create a quota for you please try creating account again DBERR"))
+            Err(AppError::Internal(Some(String::from(
+                "Could not create a quota for you please try creating account again DBERR",
+            ))))
         }
     };
-    
+
     let token = create_jwt(final_user.sub, user_quota.quota_type);
-    let response = match token {
+    match token {
         Ok(jwt) => {
-            let cookie = Cookie::build("auth_token", jwt);
+            let secure = ENVS.environment != "DEVELOPMENT";
+            
+            let cookie = Cookie::build("auth_token")
+                .value(jwt)
                 .path("/")
                 .http_only(true)
                 .same_site(axum_extra::extract::cookie::SameSite::Lax)
+                .secure(secure)
                 .finish();
             let jar = jar.add(cookie);
-            (jar, Json(json!({
-                "message": "Login Successful".to_string()
-            })))
-        },
+            Ok((
+                jar,
+                Redirect::to(&format!("{}/home", &ENVS.frontend_url)),
+            ).into_response())
+        }
         Err(err) => {
             eprintln!("{err:?}");
-            AppError::Internal(String::from("Could not generate token"))
+            Err(AppError::Internal(Some(String::from("Could not generate token"))))
         }
-    };
+    }
 }

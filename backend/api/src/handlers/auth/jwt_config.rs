@@ -1,4 +1,4 @@
-use chrono::{Duration, Offset, Utc};
+use chrono::{Duration, Utc};
 use jsonwebtoken::{Header, Validation, decode, encode, errors::Error};
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +21,7 @@ pub fn create_jwt(sub: &str, quota_type: &str) -> Result<String, Error> {
 
     let token = encode(&Header::default(), claims, &ENVS.jwt_secret);
     match token {
-        Ok(token) => token,
+        Ok(token) => Ok(token),
         Err(err) => {
             eprintln!("{err:?}");
             err
