@@ -73,7 +73,9 @@ pub async fn google_auth_callback(
         Ok(res) => res,
         Err(err) => {
             eprintln!("{err:?}");
-            return Err(AppError::Internal(Some("Error while getting token".to_string())));
+            return Err(AppError::Internal(Some(
+                "Error while getting token".to_string(),
+            )));
         }
     };
     let json = res.json::<serde_json::Value>().await;
@@ -82,10 +84,12 @@ pub async fn google_auth_callback(
             Some(token) => {
                 println!("{val:?}");
                 token.as_str().unwrap_or_default().to_string()
-            },
+            }
             None => {
                 eprintln!("Access token not received, {:?}", val);
-                return Err(AppError::Internal(Some("Access token not received".to_string())));
+                return Err(AppError::Internal(Some(
+                    "Access token not received".to_string(),
+                )));
             }
         },
         Err(err) => {
@@ -134,7 +138,7 @@ pub async fn google_auth_callback(
     let sub = user_info
         .get("sub")
         .expect("Sub should be provided from google");
-    
+
     println!("{sub:?}");
 
     let db_user = UserEntity::find()
@@ -159,7 +163,8 @@ pub async fn google_auth_callback(
 
     if let Ok(Some(_)) = cloud_accounts {
         return Err(AppError::Forbidden(Some(
-            "You Cannot Signin with this account as it was added by a different account".to_string(),
+            "You Cannot Signin with this account as it was added by a different account"
+                .to_string(),
         )));
     }
 
@@ -173,7 +178,9 @@ pub async fn google_auth_callback(
                 Ok(user) => user,
                 Err(err) => {
                     eprintln!("{err:?}");
-                    return Err(AppError::Internal(Some(String::from("Error Updating User"))));
+                    return Err(AppError::Internal(Some(String::from(
+                        "Error Updating User",
+                    ))));
                 }
             };
             user
@@ -236,20 +243,19 @@ pub async fn google_auth_callback(
             ))));
         }
     };
-    
+
     let quota_type = match user_quota.quota_type {
         QuotaType::Free => "Free",
         QuotaType::Bronze => "Bronze",
         QuotaType::Silver => "Silver",
         QuotaType::Gold => "Gold",
-        QuotaType::Platinum => "Platinum"
+        QuotaType::Platinum => "Platinum",
     };
     let token = create_jwt(&final_user.sub, quota_type);
     match token {
         Ok(jwt) => {
             let secure = ENVS.environment != "DEVELOPMENT";
-            
-            
+
             let cookie = Cookie::build(("auth_token", jwt))
                 .path("/")
                 .domain(&ENVS.frontend_url)
@@ -257,15 +263,14 @@ pub async fn google_auth_callback(
                 .same_site(axum_extra::extract::cookie::SameSite::Lax)
                 .secure(secure);
 
-                let _ = jar.clone().add(cookie);
-            Ok((
-                jar,
-                Redirect::to(&format!("{}/home", &ENVS.frontend_url)),
-            ).into_response())
+            let _ = jar.clone().add(cookie);
+            Ok((jar, Redirect::to(&format!("{}/home", &ENVS.frontend_url))).into_response())
         }
         Err(err) => {
             eprintln!("{err:?}");
-            Err(AppError::Internal(Some(String::from("Could not generate token"))))
+            Err(AppError::Internal(Some(String::from(
+                "Could not generate token",
+            ))))
         }
     }
 }

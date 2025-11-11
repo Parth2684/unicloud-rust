@@ -7,11 +7,12 @@ pub struct Migration;
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         // Replace the sample below with your own migration scripts
-        
+
         manager
-            .rename_table(Table::rename()
-                .table(Alias::new("user"), Alias::new("users"))
-                .to_owned()
+            .rename_table(
+                Table::rename()
+                    .table(Alias::new("user"), Alias::new("users"))
+                    .to_owned(),
             )
             .await
     }
@@ -22,9 +23,8 @@ impl MigrationTrait for Migration {
             .rename_table(
                 Table::rename()
                     .table(Alias::new("users"), Alias::new("user"))
-                    .to_owned()
+                    .to_owned(),
             )
             .await
     }
 }
-

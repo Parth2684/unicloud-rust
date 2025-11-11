@@ -19,7 +19,7 @@ pub fn create_jwt(sub: &str, quota_type: &str) -> Result<String, jsonwebtoken::e
         quota_type: quota_type.to_owned(),
         exp: expiration,
     };
-    
+
     let encoding_key = EncodingKey::from_secret(&ENVS.jwt_secret.as_bytes());
     let token = encode(&Header::default(), &claims, &encoding_key);
     match token {

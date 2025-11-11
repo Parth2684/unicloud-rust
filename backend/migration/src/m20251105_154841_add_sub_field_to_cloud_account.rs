@@ -1,6 +1,5 @@
 use sea_orm_migration::prelude::*;
 
-
 #[derive(DeriveMigrationName)]
 pub struct Migration;
 
@@ -11,11 +10,10 @@ impl MigrationTrait for Migration {
             .alter_table(
                 Table::alter()
                     .table(CloudAccount::Table)
-                    .add_column_if_not_exists(ColumnDef::new(CloudAccount::Sub)
-                        .string()
-                        .unique_key()
+                    .add_column_if_not_exists(
+                        ColumnDef::new(CloudAccount::Sub).string().unique_key(),
                     )
-                    .to_owned()                    
+                    .to_owned(),
             )
             .await
     }
@@ -32,5 +30,5 @@ impl MigrationTrait for Migration {
 #[derive(DeriveIden)]
 enum CloudAccount {
     Table,
-    Sub
+    Sub,
 }
