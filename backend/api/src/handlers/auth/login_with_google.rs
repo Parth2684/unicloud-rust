@@ -8,6 +8,7 @@ use axum_extra::extract::cookie::Cookie;
 use axum_extra::extract::cookie::CookieJar;
 use chrono::prelude::*;
 use entities::quota::{Column as QuotaColumn, Entity as QuotaEntity};
+use entities::sea_orm_active_enums::QuotaType;
 use entities::user::{Column as UserColumn, Entity as UserEntity};
 use entities::{cloud_account, quota, user};
 use reqwest::Client;
@@ -225,25 +226,32 @@ pub async fn google_auth_callback(
         },
         Err(err) => {
             eprintln!("{err:?}");
-            Err(AppError::Internal(Some(String::from(
+            return Err(AppError::Internal(Some(String::from(
                 "Could not create a quota for you please try creating account again DBERR",
-            ))))
+            ))));
         }
     };
-
-    let token = create_jwt(final_user.sub, user_quota.quota_type);
+    
+    let quota_type = match user_quota.quota_type {
+        QuotaType::Free => "Free",
+        QuotaType::Bronze => "Bronze",
+        QuotaType::Silver => "Silver",
+        QuotaType::Gold => "Gold",
+        QuotaType::Platinum => "Platinum"
+    };
+    let token = create_jwt(&final_user.sub, quota_type);
     match token {
         Ok(jwt) => {
             let secure = ENVS.environment != "DEVELOPMENT";
             
-            let cookie = Cookie::build("auth_token")
-                .value(jwt)
+            
+            let cookie = Cookie::build(("auth_token", jwt))
                 .path("/")
                 .http_only(true)
                 .same_site(axum_extra::extract::cookie::SameSite::Lax)
-                .secure(secure)
-                .finish();
-            let jar = jar.add(cookie);
+                .secure(secure);
+
+                jar.add(cookie);
             Ok((
                 jar,
                 Redirect::to(&format!("{}/home", &ENVS.frontend_url)),

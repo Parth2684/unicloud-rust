@@ -24,7 +24,7 @@ pub static ENVS: Lazy<Envs> = Lazy::new(|| {
     let backend_url = dotenvy::var("BACKEND_URL").expect("Backend Url must be provided");
     let jwt_secret = dotenvy::var("JWT_SECRET").expect("JWT_SECRET must be provided");
     let frontend_url = dotenvy::var("FRONTEND_URL").expect("fronend url is not present in env");
-    let environment = dotenvy::var("ENVIRONMENT").unwrap_or_else(|| String::from("DEVELOPMENT"));
+    let environment = dotenvy::var("ENVIRONMENT").expect("Environment variable is not defined in env");
     Envs {
         database_url,
         google_client_id,

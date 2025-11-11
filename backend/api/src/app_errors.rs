@@ -21,8 +21,8 @@ impl IntoResponse for AppError {
                         "message": message
                     })),
                 )
-                    .into_response();
-            }
+                    .into_response()
+            },
             AppError::NotFound(msg) => {
                 let message = msg.unwrap_or_else(|| String::from("Not Found"));
                 (
@@ -32,7 +32,7 @@ impl IntoResponse for AppError {
                     })),
                 )
                     .into_response()
-            }
+            },
             AppError::Unauthorised(msg) => {
                 let message = msg.unwrap_or_else(|| String::from("Unauthorised"));
                 (
@@ -42,7 +42,7 @@ impl IntoResponse for AppError {
                     })),
                 )
                     .into_response()
-            }
+            },
             AppError::Forbidden(msg) => {
                 let message = msg.unwrap_or_else(|| String::from("Forbidden"));
                 (
@@ -52,7 +52,7 @@ impl IntoResponse for AppError {
                     }))
                 )
                     .into_response()
-            }
+            },
         }
     }
 }
