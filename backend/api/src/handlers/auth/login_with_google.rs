@@ -77,9 +77,12 @@ pub async fn google_auth_callback(
         }
     };
     let json = res.json::<serde_json::Value>().await;
-    let access_token = match json {
+    let access_token = match &json {
         Ok(val) => match val.get("access_token") {
-            Some(token) => token.as_str().unwrap_or_default().to_string(),
+            Some(token) => {
+                println!("{val:?}");
+                token.as_str().unwrap_or_default().to_string()
+            },
             None => {
                 eprintln!("Access token not received, {:?}", val);
                 return Err(AppError::Internal(Some("Access token not received".to_string())));
@@ -131,9 +134,11 @@ pub async fn google_auth_callback(
     let sub = user_info
         .get("sub")
         .expect("Sub should be provided from google");
+    
+    println!("{sub:?}");
 
     let db_user = UserEntity::find()
-        .filter(UserColumn::Sub.eq(sub.as_str()))
+        .filter(UserColumn::Sub.eq(sub.to_string()))
         .one(db)
         .await;
 
@@ -247,6 +252,7 @@ pub async fn google_auth_callback(
             
             let cookie = Cookie::build(("auth_token", jwt))
                 .path("/")
+                .domain(&ENVS.frontend_url)
                 .http_only(true)
                 .same_site(axum_extra::extract::cookie::SameSite::Lax)
                 .secure(secure);

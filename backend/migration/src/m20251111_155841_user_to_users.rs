@@ -28,7 +28,3 @@ impl MigrationTrait for Migration {
     }
 }
 
-#[derive(DeriveIden)]
-enum User {
-    Table
-}

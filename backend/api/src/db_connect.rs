@@ -8,8 +8,8 @@ pub static DB: OnceCell<DatabaseConnection> = OnceCell::const_new();
 pub async fn init_db() -> &'static DatabaseConnection {
     DB.get_or_init(|| async {
         let mut opt = ConnectOptions::new(&ENVS.database_url);
-        opt.max_connections(100)
-            .min_connections(5)
+        opt.max_connections(10)
+            .min_connections(1)
             .connect_timeout(Duration::from_secs(8))
             .acquire_timeout(Duration::from_secs(8))
             .idle_timeout(Duration::from_secs(8))
