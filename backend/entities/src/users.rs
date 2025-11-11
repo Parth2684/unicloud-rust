@@ -3,9 +3,8 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "user")]
+#[sea_orm(table_name = "users")]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: Uuid,
@@ -16,10 +15,26 @@ pub struct Model {
     pub image: Option<String>,
     #[sea_orm(unique)]
     pub sub: String,
-    #[sea_orm(has_many)]
-    pub cloud_accounts: HasMany<super::cloud_account::Entity>,
-    #[sea_orm(has_one)]
-    pub quota: HasOne<super::quota::Entity>,
+}
+
+#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
+pub enum Relation {
+    #[sea_orm(has_many = "super::cloud_account::Entity")]
+    CloudAccount,
+    #[sea_orm(has_one = "super::quota::Entity")]
+    Quota,
+}
+
+impl Related<super::cloud_account::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::CloudAccount.def()
+    }
+}
+
+impl Related<super::quota::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Quota.def()
+    }
 }
 
 impl ActiveModelBehavior for ActiveModel {}

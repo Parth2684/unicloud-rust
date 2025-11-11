@@ -2,4 +2,4 @@
 
 pub use super::cloud_account::Entity as CloudAccount;
 pub use super::quota::Entity as Quota;
-pub use super::user::Entity as User;
+pub use super::users::Entity as Users;

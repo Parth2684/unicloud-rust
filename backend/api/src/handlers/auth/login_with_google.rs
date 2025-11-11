@@ -9,8 +9,8 @@ use axum_extra::extract::cookie::CookieJar;
 use chrono::prelude::*;
 use entities::quota::{Column as QuotaColumn, Entity as QuotaEntity};
 use entities::sea_orm_active_enums::QuotaType;
-use entities::user::{Column as UserColumn, Entity as UserEntity};
-use entities::{cloud_account, quota, user};
+use entities::users::{Column as UserColumn, Entity as UserEntity};
+use entities::{cloud_account, quota, users};
 use reqwest::Client;
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
@@ -43,7 +43,7 @@ pub async fn google_auth_redirect() -> Redirect {
 }
 
 #[derive(Serialize, Deserialize)]
-struct AuthRequest {
+pub struct AuthRequest {
     code: String,
     state: Option<String>,
 }
@@ -81,7 +81,7 @@ pub async fn google_auth_callback(
         Ok(val) => match val.get("access_token") {
             Some(token) => token.as_str().unwrap_or_default().to_string(),
             None => {
-                eprintln!("Access token not received");
+                eprintln!("Access token not received, {:?}", val);
                 return Err(AppError::Internal(Some("Access token not received".to_string())));
             }
         },
@@ -160,11 +160,11 @@ pub async fn google_auth_callback(
 
     let final_user = match db_user {
         Some(user_found) => {
-            let mut update_user: user::ActiveModel = user_found.into();
+            let mut update_user: users::ActiveModel = user_found.into();
             update_user.gmail = Set(email.to_string());
             update_user.name = Set(name.to_string());
             update_user.image = Set(Some(image.to_string()));
-            let user: user::Model = match update_user.update(db).await {
+            let user: users::Model = match update_user.update(db).await {
                 Ok(user) => user,
                 Err(err) => {
                     eprintln!("{err:?}");
@@ -176,7 +176,7 @@ pub async fn google_auth_callback(
         None => {
             let uuidv4 = Uuid::new_v4();
             let utc = Utc::now().naive_utc();
-            let insert_user = user::ActiveModel {
+            let insert_user = users::ActiveModel {
                 id: Set(uuidv4),
                 gmail: Set(email.to_string()),
                 created_at: Set(utc),
@@ -184,7 +184,7 @@ pub async fn google_auth_callback(
                 sub: Set(sub.to_string()),
                 name: Set(name.to_string()),
             };
-            let user: user::Model = match insert_user.insert(db).await {
+            let user: users::Model = match insert_user.insert(db).await {
                 Ok(user) => user,
                 Err(err) => {
                     eprintln!("{err}");
@@ -251,7 +251,7 @@ pub async fn google_auth_callback(
                 .same_site(axum_extra::extract::cookie::SameSite::Lax)
                 .secure(secure);
 
-                jar.add(cookie);
+                let _ = jar.clone().add(cookie);
             Ok((
                 jar,
                 Redirect::to(&format!("{}/home", &ENVS.frontend_url)),

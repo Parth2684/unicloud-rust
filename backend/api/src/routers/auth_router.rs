@@ -7,6 +7,6 @@ use crate::handlers::auth::login_with_google::{google_auth_callback, google_auth
 
 pub fn auth_routes() -> Router {
     Router::new()
-        .route("/auth/google", get(google_auth_redirect))
-        .route("/auth/google/callback", get(google_auth_callback))
+        .route("/google", get(google_auth_redirect))
+        .route("/google/callback", get(google_auth_callback))
 }

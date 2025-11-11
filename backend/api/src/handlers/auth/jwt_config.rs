@@ -1,5 +1,4 @@
 use chrono::{Duration, Utc};
-use entities::sea_orm_active_enums::QuotaType;
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
@@ -13,7 +12,7 @@ pub struct Claims {
 }
 
 pub fn create_jwt(sub: &str, quota_type: &str) -> Result<String, jsonwebtoken::errors::Error> {
-    let timestamp = (Utc::now() + Duration::days(7));
+    let timestamp = Utc::now() + Duration::days(7);
     let expiration = timestamp.timestamp();
     let claims = Claims {
         sub: sub.to_owned(),

@@ -16,7 +16,7 @@ pub async fn init_db() -> &'static DatabaseConnection {
             .max_lifetime(Duration::from_secs(8))
             .sqlx_logging(false) // disable SQLx logging
             .sqlx_logging_level(log::LevelFilter::Info)
-            .set_schema_search_path("my_schema");
+            .set_schema_search_path("public");
 
         match Database::connect(opt).await {
             Ok(db) => db,
