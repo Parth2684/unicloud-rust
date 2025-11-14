@@ -79,7 +79,6 @@ pub async fn google_auth_callback(
         }
     };
     let json = res.json::<serde_json::Value>().await;
-    println!("{json:?}");
     let access_token = match &json {
         Ok(val) => match val.get("access_token") {
             Some(token) => {

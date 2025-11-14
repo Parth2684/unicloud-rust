@@ -19,6 +19,7 @@ pub struct Model {
     pub refresh_token: Option<Vec<u8>>,
     pub is_primary: bool,
     pub created_at: Option<DateTime>,
+    pub expires_in: Option<i64>,
     #[sea_orm(unique)]
     pub sub: Option<String>,
 }

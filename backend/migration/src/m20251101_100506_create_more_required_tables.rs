@@ -64,6 +64,10 @@ impl MigrationTrait for Migration {
                             .date_time()
                             .default(Expr::cust("NOW()")),
                     )
+                    .col(
+                        ColumnDef::new(CloudAccount::ExpiresIn)
+                            .big_integer()
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-cloudaccount-user-id")
@@ -163,6 +167,7 @@ enum CloudAccount {
     RefreshToken,
     IsPrimary,
     CreatedAt,
+    ExpiresIn
 }
 
 #[derive(DeriveIden)]
