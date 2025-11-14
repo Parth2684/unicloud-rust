@@ -6,16 +6,16 @@ use crate::utils::export_envs::ENVS;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
-    pub sub: String,
+    pub id: String,
     pub quota_type: String,
     pub exp: i64,
 }
 
-pub fn create_jwt(sub: &str, quota_type: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn create_jwt(id: &str, quota_type: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let timestamp = Utc::now() + Duration::days(7);
     let expiration = timestamp.timestamp();
     let claims = Claims {
-        sub: sub.to_owned(),
+        id: id.to_owned(),
         quota_type: quota_type.to_owned(),
         exp: expiration,
     };

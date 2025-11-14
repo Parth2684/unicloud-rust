@@ -1,7 +1,7 @@
-use axum::response::Redirect;
+use axum::response::{IntoResponse, Redirect};
 use url::Url;
 
-use crate::utils::export_envs::ENVS;
+use crate::utils::{app_errors::AppError, export_envs::ENVS};
 
 
 pub async fn drive_auth_redirect() -> Redirect {
@@ -21,3 +21,5 @@ pub async fn drive_auth_redirect() -> Redirect {
         }
     }
 }
+
+pub async fn drive_auth_callback() -> Result<impl IntoResponse, AppError> 

@@ -44,8 +44,8 @@ pub async fn google_auth_redirect() -> Redirect {
 
 #[derive(Serialize, Deserialize)]
 pub struct AuthRequest {
-    code: String,
-    state: Option<String>,
+    pub code: String,
+    pub state: Option<String>,
 }
 
 pub async fn google_auth_callback(
@@ -250,7 +250,7 @@ pub async fn google_auth_callback(
         QuotaType::Gold => "Gold",
         QuotaType::Platinum => "Platinum",
     };
-    let token = create_jwt(&final_user.sub, quota_type);
+    let token = create_jwt(&final_user.id.to_string(), quota_type);
     match token {
         Ok(jwt) => {
             let secure = ENVS.environment != "DEVELOPMENT";
