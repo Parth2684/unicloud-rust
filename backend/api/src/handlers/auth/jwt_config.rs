@@ -2,7 +2,7 @@ use chrono::{Duration, Utc};
 use jsonwebtoken::{DecodingKey, EncodingKey, Header, Validation, decode, encode};
 use serde::{Deserialize, Serialize};
 
-use crate::export_envs::ENVS;
+use crate::utils::export_envs::ENVS;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {

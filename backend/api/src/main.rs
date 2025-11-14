@@ -1,11 +1,10 @@
 use axum::{Router, routing::get};
 
 use crate::routers::auth_router::auth_routes;
-mod app_errors;
-mod db_connect;
-mod export_envs;
+
 mod handlers;
 mod routers;
+mod utils;
 
 #[tokio::main]
 async fn main() {

@@ -1,6 +1,6 @@
-use crate::app_errors::AppError;
-use crate::db_connect::init_db;
-use crate::export_envs::ENVS;
+use crate::utils::app_errors::AppError;
+use crate::utils::db_connect::init_db;
+use crate::utils::export_envs::ENVS;
 use crate::handlers::auth::jwt_config::create_jwt;
 use axum::response::IntoResponse;
 use axum::{extract::Query, response::Redirect};
@@ -79,10 +79,10 @@ pub async fn google_auth_callback(
         }
     };
     let json = res.json::<serde_json::Value>().await;
+    println!("{json:?}");
     let access_token = match &json {
         Ok(val) => match val.get("access_token") {
             Some(token) => {
-                println!("{val:?}");
                 token.as_str().unwrap_or_default().to_string()
             }
             None => {
@@ -139,7 +139,6 @@ pub async fn google_auth_callback(
         .get("sub")
         .expect("Sub should be provided from google");
 
-    println!("{sub:?}");
 
     let db_user = UserEntity::find()
         .filter(UserColumn::Sub.eq(sub.to_string()))
@@ -149,7 +148,7 @@ pub async fn google_auth_callback(
     let db_user = match db_user {
         Ok(optional_user) => optional_user,
         Err(err) => {
-            println!("{err}");
+            eprintln!("{err}");
             return Err(AppError::Internal(Some(
                 "Database service is probably down".to_string(),
             )));

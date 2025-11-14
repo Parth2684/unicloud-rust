@@ -9,6 +9,9 @@ pub struct Envs {
     pub jwt_secret: String,
     pub frontend_url: String,
     pub environment: String,
+    pub google_drive_client_id: String,
+    pub google_drive_client_secret: String,
+    pub google_drive_redirect_url: String,
 }
 
 pub static ENVS: Lazy<Envs> = Lazy::new(|| {
@@ -26,6 +29,9 @@ pub static ENVS: Lazy<Envs> = Lazy::new(|| {
     let frontend_url = dotenvy::var("FRONTEND_URL").expect("fronend url is not present in env");
     let environment =
         dotenvy::var("ENVIRONMENT").expect("Environment variable is not defined in env");
+    let google_drive_client_id = dotenvy::var("GOOGLE_DRIVE_CLIENT_ID").expect("Google Client Id for google drive is not provided");
+    let google_drive_client_secret = dotenvy::var("GOOGLE_DRIVE_CLIENT_SECRET").expect("Google Client secret got google drive is not provided");
+    let google_drive_redirect_url = dotenvy::var("GOOGLE_DRIVE_CLIENT_REDIRECT_URL").expect("Google drive client redirect url is not provided");
     Envs {
         database_url,
         google_client_id,
@@ -35,5 +41,8 @@ pub static ENVS: Lazy<Envs> = Lazy::new(|| {
         jwt_secret,
         frontend_url,
         environment,
+        google_drive_client_id,
+        google_drive_client_secret,
+        google_drive_redirect_url,
     }
 });
