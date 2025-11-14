@@ -15,8 +15,9 @@ pub struct Model {
     #[sea_orm(unique)]
     pub email: String,
     pub access_token: String,
-    pub refresh_token: Option<String>,
-    pub is_primary: Option<bool>,
+    #[sea_orm(column_type = "VarBinary(StringLen::None)", nullable)]
+    pub refresh_token: Option<Vec<u8>>,
+    pub is_primary: bool,
     pub created_at: Option<DateTime>,
     #[sea_orm(unique)]
     pub sub: Option<String>,

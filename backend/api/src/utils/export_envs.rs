@@ -1,4 +1,5 @@
 use once_cell::sync::Lazy;
+use hex::FromHex;
 
 pub struct Envs {
     pub database_url: String,
@@ -12,6 +13,7 @@ pub struct Envs {
     pub google_drive_client_id: String,
     pub google_drive_client_secret: String,
     pub google_drive_redirect_url: String,
+    pub encryption_key: [u8; 32]
 }
 
 pub static ENVS: Lazy<Envs> = Lazy::new(|| {
@@ -32,6 +34,14 @@ pub static ENVS: Lazy<Envs> = Lazy::new(|| {
     let google_drive_client_id = dotenvy::var("GOOGLE_DRIVE_CLIENT_ID").expect("Google Client Id for google drive is not provided");
     let google_drive_client_secret = dotenvy::var("GOOGLE_DRIVE_CLIENT_SECRET").expect("Google Client secret got google drive is not provided");
     let google_drive_redirect_url = dotenvy::var("GOOGLE_DRIVE_CLIENT_REDIRECT_URL").expect("Google drive client redirect url is not provided");
+    let encryption_key = dotenvy::var("ENCRYPTION_KEY").expect("encryption key is necessary for encryption in aes-256");
+    let encryption_key = match <[u8; 32]>::from_hex(encryption_key) {
+        Ok(key) => key,
+        Err(err) => {
+            panic!("Put a correct encryption key in env {err:?}");
+        }
+    };
+    
     Envs {
         database_url,
         google_client_id,
@@ -44,5 +54,6 @@ pub static ENVS: Lazy<Envs> = Lazy::new(|| {
         google_drive_client_id,
         google_drive_client_secret,
         google_drive_redirect_url,
+        encryption_key
     }
 });

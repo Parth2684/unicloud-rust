@@ -20,5 +20,4 @@ pub async fn drive_auth_redirect() -> Redirect {
             Redirect::to(&format!("{}/auth/drive", &ENVS.backend_url))
         }
     }
-    
 }

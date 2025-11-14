@@ -52,10 +52,11 @@ impl MigrationTrait for Migration {
                             .string()
                             .not_null(),
                     )
-                    .col(ColumnDef::new(CloudAccount::RefreshToken).string())
+                    .col(ColumnDef::new(CloudAccount::RefreshToken).binary())
                     .col(
                         ColumnDef::new(CloudAccount::IsPrimary)
                             .boolean()
+                            .not_null()
                             .default(false),
                     )
                     .col(
