@@ -1,7 +1,7 @@
+use crate::handlers::auth::jwt_config::create_jwt;
 use crate::utils::app_errors::AppError;
 use crate::utils::db_connect::init_db;
 use crate::utils::export_envs::ENVS;
-use crate::handlers::auth::jwt_config::create_jwt;
 use axum::response::IntoResponse;
 use axum::{extract::Query, response::Redirect};
 use axum_extra::extract::cookie::Cookie;
@@ -81,9 +81,7 @@ pub async fn google_auth_callback(
     let json = res.json::<serde_json::Value>().await;
     let access_token = match &json {
         Ok(val) => match val.get("access_token") {
-            Some(token) => {
-                token.as_str().unwrap_or_default().to_string()
-            }
+            Some(token) => token.as_str().unwrap_or_default().to_string(),
             None => {
                 eprintln!("Access token not received, {:?}", val);
                 return Err(AppError::Internal(Some(
@@ -137,7 +135,6 @@ pub async fn google_auth_callback(
     let sub = user_info
         .get("sub")
         .expect("Sub should be provided from google");
-
 
     let db_user = UserEntity::find()
         .filter(UserColumn::Sub.eq(sub.to_string()))
@@ -198,9 +195,9 @@ pub async fn google_auth_callback(
                 Ok(user) => user,
                 Err(err) => {
                     eprintln!("{err}");
-                    return Err(AppError::Internal(Some(String::from(String::from(
+                    return Err(AppError::Internal(Some(String::from(
                         "Error Creating User Please try again",
-                    )))));
+                    ))));
                 }
             };
             user

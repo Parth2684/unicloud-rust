@@ -1,11 +1,11 @@
-use aes_gcm::{AeadCore, Aes256Gcm, Key, KeyInit, aead::{AeadMut, OsRng}};
+use aes_gcm::{
+    AeadCore, Aes256Gcm, Key, KeyInit,
+    aead::{AeadMut, OsRng},
+};
 
 use crate::utils::{app_errors::AppError, export_envs::ENVS};
 
-
-
-
-pub fn encrypt (plaintext: &str) -> Result<Vec<u8>, AppError> {
+pub fn encrypt(plaintext: &str) -> Result<Vec<u8>, AppError> {
     let key: &Key<Aes256Gcm> = &ENVS.encryption_key.try_into().unwrap();
     let mut cipher = Aes256Gcm::new(&key);
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
@@ -30,8 +30,8 @@ pub fn decrypt(data: Vec<u8>) -> Result<String, AppError> {
     match plaintext_bytes {
         Ok(bytes) => match String::from_utf8(bytes) {
             Ok(str) => Ok(str),
-            Err(err) => Err(AppError::Internal(Some(err.to_string())))
+            Err(err) => Err(AppError::Internal(Some(err.to_string()))),
         },
-        Err(err) => Err(AppError::Internal(Some(err.to_string())))
+        Err(err) => Err(AppError::Internal(Some(err.to_string()))),
     }
-} 
+}
