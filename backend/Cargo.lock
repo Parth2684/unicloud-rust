@@ -140,6 +140,7 @@ dependencies = [
  "entities",
  "futures",
  "hex",
+ "http",
  "jsonwebtoken",
  "log",
  "once_cell",
@@ -148,6 +149,7 @@ dependencies = [
  "serde",
  "serde_json",
  "tokio",
+ "tower-http",
  "url",
  "uuid",
 ]
