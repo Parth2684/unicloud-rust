@@ -13,7 +13,7 @@ use entities::users::{Column as UserColumn, Entity as UserEntity};
 use entities::{cloud_account, quota, users};
 use reqwest::Client;
 use sea_orm::ActiveValue::Set;
-use sea_orm::{ActiveModelTrait, ColIdx, ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ActiveModelTrait,  ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;

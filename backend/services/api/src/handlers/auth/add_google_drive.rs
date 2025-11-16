@@ -1,9 +1,8 @@
 use crate::utils::encrypt::encrypt;
-use axum::http::StatusCode;
 use axum::{
-    Extension, Json,
+    Extension, 
     extract::Query,
-    response::{IntoResponse, Redirect},
+    response::{Redirect},
 };
 use entities::cloud_account::{
     ActiveModel as CloudAccountActive, Column as CloudAccountColumn, Entity as CloudAccountEntity,
@@ -12,7 +11,6 @@ use entities::cloud_account::{
 use entities::users::{Entity as UserEntity, Model as UserModel};
 use reqwest::Client;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, DbErr, EntityTrait, QueryFilter};
-use serde_json::{Value, json};
 use url::Url;
 use uuid::Uuid;
 
