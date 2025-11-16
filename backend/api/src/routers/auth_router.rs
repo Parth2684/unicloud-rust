@@ -15,7 +15,7 @@ pub fn auth_routes() -> Router {
         .layer(middleware::from_fn(auth_middleware));
 
     Router::new()
+        .merge(protected_routes)
         .route("/google", get(google_auth_redirect))
         .route("/google/callback", get(google_auth_callback))
-        .merge(protected_routes)
 }

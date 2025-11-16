@@ -1,7 +1,7 @@
 use crate::{routers::auth_router::auth_routes, utils::export_envs::ENVS};
 use axum::{Router, http::HeaderValue, routing::get};
 use http::Method;
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowHeaders, CorsLayer};
 
 mod handlers;
 mod routers;
@@ -17,7 +17,7 @@ async fn main() {
                 .unwrap(),
         )
         .allow_credentials(true)
-        .allow_headers(Any)
+        .allow_headers(AllowHeaders::mirror_request())
         .allow_methods([
             Method::GET,
             Method::POST,

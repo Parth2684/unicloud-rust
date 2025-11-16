@@ -39,14 +39,14 @@ pub fn create_jwt(id: &str, quota_type: &str) -> Result<String, jsonwebtoken::er
 }
 
 pub fn decode_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
-    let decoding_key = DecodingKey::from_secret(&ENVS.jwt_secret.as_bytes());
-    let data = decode(token, &decoding_key, &Validation::default());
-    let result: Result<Claims, jsonwebtoken::errors::Error> = match data {
-        Ok(data) => Ok(data.claims),
-        Err(err) => {
-            eprintln!("{err:?}");
-            Err(err)
-        }
-    };
-    result
+    let token: String = token.chars().filter(|c| !c.is_whitespace()).collect();
+
+    let decoding_key = DecodingKey::from_secret(ENVS.jwt_secret.as_bytes());
+
+    let mut validation = Validation::new(jsonwebtoken::Algorithm::HS256);
+    validation.validate_exp = true;
+
+    let data = decode::<Claims>(&token, &decoding_key, &validation)?;
+
+    Ok(data.claims)
 }

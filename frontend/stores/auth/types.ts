@@ -7,11 +7,10 @@ export interface User {
 
 export type AuthState = {
   authUser: User | null;
-  isLoggingIn: boolean;
-  isLoggingOut: boolean;
   isLoggedIn: boolean;
 };
 
 export type AuthAction = {
-  login: () => void;
+  setUser: (user: User) => void
+  logout: () => void
 };

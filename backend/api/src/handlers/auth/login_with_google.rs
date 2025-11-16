@@ -13,7 +13,7 @@ use entities::users::{Column as UserColumn, Entity as UserEntity};
 use entities::{cloud_account, quota, users};
 use reqwest::Client;
 use sea_orm::ActiveValue::Set;
-use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ActiveModelTrait, ColIdx, ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
@@ -49,7 +49,7 @@ pub struct AuthRequest {
 }
 
 pub async fn google_auth_callback(
-    jar: CookieJar,
+    mut jar: CookieJar,
     Query(params): Query<AuthRequest>,
 ) -> Result<impl IntoResponse, AppError> {
     let client = Client::new();
@@ -251,14 +251,16 @@ pub async fn google_auth_callback(
         Ok(jwt) => {
             let secure = ENVS.environment != "DEVELOPMENT";
 
-            let cookie = Cookie::build(("auth_token", jwt))
+            let mut cookie = Cookie::build(("auth_token", jwt))
                 .path("/")
-                .domain(&ENVS.frontend_url)
                 .http_only(true)
                 .same_site(axum_extra::extract::cookie::SameSite::Lax)
                 .secure(secure);
 
-            let _ = jar.clone().add(cookie);
+            if &ENVS.environment == "production" {
+                cookie = cookie.domain(&ENVS.frontend_url);
+            }
+            jar = jar.clone().add(cookie);
             Ok((jar, Redirect::to(&format!("{}/home", &ENVS.frontend_url))).into_response())
         }
         Err(err) => {

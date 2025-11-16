@@ -1,6 +1,5 @@
 use axum::{extract::Request, middleware::Next, response::Response};
 use axum_extra::extract::CookieJar;
-use chrono::Utc;
 
 use crate::{
     handlers::auth::jwt_config::{Claims, decode_jwt},
@@ -14,7 +13,7 @@ pub async fn auth_middleware(
 ) -> Result<Response, AppError> {
     let jwt = jar.get("auth_token");
     let jwt = match jwt {
-        Some(token) => token,
+        Some(token) => token.value(),
         None => {
             return Err(AppError::Unauthorised(Some(String::from(
                 "Authorisation Token not found",
@@ -25,15 +24,9 @@ pub async fn auth_middleware(
     let claims = decode_jwt(&token);
     match claims {
         Ok(claim) => {
-            let current_time = Utc::now();
-            let time = current_time.timestamp();
-            if time > claim.exp {
-                return Err(AppError::Unauthorised(Some(String::from("Token expired"))));
-            } else {
-                request.extensions_mut().insert::<Claims>(claim);
-                let response = next.run(request).await;
-                Ok(response)
-            }
+            request.extensions_mut().insert::<Claims>(claim);
+            let response = next.run(request).await;
+            Ok(response)
         }
         Err(err) => Err(AppError::Unauthorised(Some(err.to_string()))),
     }

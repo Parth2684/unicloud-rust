@@ -12,7 +12,7 @@ use entities::cloud_account::{
 use entities::users::{Entity as UserEntity, Model as UserModel};
 use reqwest::Client;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, DbErr, EntityTrait, QueryFilter};
-use serde_json::json;
+use serde_json::{Value, json};
 use url::Url;
 use uuid::Uuid;
 
@@ -28,9 +28,13 @@ pub async fn drive_auth_redirect() -> Redirect {
             ("client_id", *&ENVS.google_drive_client_id.as_str()),
             ("redirect_uri", *&ENVS.google_drive_redirect_url.as_str()),
             ("response_type", "code"),
-            ("scope", "drive openid email"),
+            (
+                "scope",
+                "openid email https://www.googleapis.com/auth/drive",
+            ),
             ("access_type", "offline"),
             ("prompt", "consent"),
+            ("include_granted_scope", "true"),
         ],
     );
     match auth_url {
@@ -45,7 +49,7 @@ pub async fn drive_auth_redirect() -> Redirect {
 pub async fn drive_auth_callback(
     Extension(claims): Extension<Claims>,
     Query(params): Query<AuthRequest>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Redirect, AppError> {
     let client = Client::new();
     let token_url = String::from("https://oauth2.googleapis.com/token");
     let client_id = &ENVS.google_drive_client_id;
@@ -82,6 +86,7 @@ pub async fn drive_auth_callback(
             ))));
         }
     };
+
     let access_token = match json.get("access_token") {
         Some(token) => token.to_string(),
         None => {
@@ -235,11 +240,8 @@ pub async fn drive_auth_callback(
         }
     };
 
-    Ok((
-        StatusCode::ACCEPTED,
-        Json(json!({
-            "message": "Google Drive Account Added Successfully",
-            "final_account_cloud": final_cloud_account
-        })),
-    ))
+    Ok(Redirect::to(&format!(
+        "{}/home",
+        &ENVS.frontend_url.to_string()
+    )))
 }
