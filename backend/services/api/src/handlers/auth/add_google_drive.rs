@@ -1,9 +1,5 @@
 use crate::utils::encrypt::encrypt;
-use axum::{
-    Extension, 
-    extract::Query,
-    response::{Redirect},
-};
+use axum::{Extension, extract::Query, response::Redirect};
 use entities::cloud_account::{
     ActiveModel as CloudAccountActive, Column as CloudAccountColumn, Entity as CloudAccountEntity,
     Model as CloudAccountModel,
