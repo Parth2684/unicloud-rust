@@ -1,5 +1,9 @@
-use common::encrypt::encrypt;
+use crate::{handlers::auth::login_with_google::AuthRequest, utils::app_errors::AppError};
 use axum::{Extension, extract::Query, response::Redirect};
+use common::db_connect::init_db;
+use common::encrypt::encrypt;
+use common::export_envs::ENVS;
+use common::jwt_config::Claims;
 use entities::cloud_account::{
     ActiveModel as CloudAccountActive, Column as CloudAccountColumn, Entity as CloudAccountEntity,
     Model as CloudAccountModel,
@@ -9,13 +13,6 @@ use reqwest::Client;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use url::Url;
 use uuid::Uuid;
-use common::jwt_config::Claims;
-use common::db_connect::init_db;
-use common::export_envs::ENVS;
-use crate::{
-    handlers::auth::{login_with_google::AuthRequest},
-    utils::app_errors::AppError
-};
 
 pub async fn drive_auth_redirect() -> Redirect {
     let auth_url = Url::parse_with_params(
@@ -88,9 +85,13 @@ pub async fn drive_auth_callback(
             let token = token.as_str();
             match token {
                 Some(t) => t.to_owned(),
-                None => return Err(AppError::Internal(Some(String::from("Error parsing access token"))))
+                None => {
+                    return Err(AppError::Internal(Some(String::from(
+                        "Error parsing access token",
+                    ))));
+                }
             }
-        },
+        }
         None => {
             return Err(AppError::Forbidden(Some(String::from(
                 "No token receiverd from google",
@@ -122,9 +123,9 @@ pub async fn drive_auth_callback(
             let oid = val.as_str();
             match oid {
                 Some(id) => id.to_owned(),
-                None => return Err(AppError::Internal(Some(String::from("Error Parsing sub"))))
+                None => return Err(AppError::Internal(Some(String::from("Error Parsing sub")))),
             }
-        },
+        }
         None => {
             return Err(AppError::Forbidden(Some(String::from(
                 "Couldn't retrieve openid from google",
@@ -136,9 +137,13 @@ pub async fn drive_auth_callback(
             let val = mail.as_str();
             match val {
                 Some(m) => m.to_owned(),
-                None => return Err(AppError::Internal(Some(String::from("Error parsing email"))))
+                None => {
+                    return Err(AppError::Internal(Some(String::from(
+                        "Error parsing email",
+                    ))));
+                }
             }
-        },
+        }
         None => {
             return Err(AppError::Unauthorised(Some(String::from(
                 "Couldn't retrieve email from google",
@@ -151,7 +156,9 @@ pub async fn drive_auth_callback(
         Ok(token) => token,
         Err(err) => {
             eprintln!("error while encrypting access token {:?}", err);
-            return Err(AppError::Internal(Some("Error while encrypting token".to_string())))
+            return Err(AppError::Internal(Some(
+                "Error while encrypting token".to_string(),
+            )));
         }
     };
 
@@ -161,7 +168,11 @@ pub async fn drive_auth_callback(
             let refresh_token = token.as_str();
             let refresh_token = match refresh_token {
                 Some(token) => encrypt(token),
-                None => return Err(AppError::Internal(Some(String::from("Error parsing refresh token"))))
+                None => {
+                    return Err(AppError::Internal(Some(String::from(
+                        "Error parsing refresh token",
+                    ))));
+                }
             };
             let (cloud_account, user_account): (
                 Result<Option<CloudAccountModel>, DbErr>,
@@ -175,7 +186,7 @@ pub async fn drive_auth_callback(
                 },
                 async { UserEntity::find_by_id(claims.id).one(db).await }
             );
-        
+
             let cloud_account = match cloud_account {
                 Ok(con) => con,
                 Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
@@ -184,7 +195,7 @@ pub async fn drive_auth_callback(
                 Ok(con) => con,
                 Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
             };
-        
+
             let final_user_account = match user_account {
                 Some(acc) => acc,
                 None => {
@@ -197,7 +208,9 @@ pub async fn drive_auth_callback(
                 Ok(token) => token,
                 Err(err) => {
                     eprintln!("error encrypting token {:?}", err);
-                    return Err(AppError::Internal(Some(String::from("Error encrypting refresh token"))))
+                    return Err(AppError::Internal(Some(String::from(
+                        "Error encrypting refresh token",
+                    ))));
                 }
             };
             match cloud_account {
@@ -244,12 +257,12 @@ pub async fn drive_auth_callback(
                     account
                 }
             };
-        
+
             Ok(Redirect::to(&format!(
                 "{}/home",
                 &ENVS.frontend_url.to_string()
             )))
-        },
+        }
         None => {
             let (cloud_account, user_account): (
                 Result<Option<CloudAccountModel>, DbErr>,
@@ -263,7 +276,7 @@ pub async fn drive_auth_callback(
                 },
                 async { UserEntity::find_by_id(claims.id).one(db).await }
             );
-        
+
             let cloud_account = match cloud_account {
                 Ok(con) => con,
                 Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
@@ -272,7 +285,7 @@ pub async fn drive_auth_callback(
                 Ok(con) => con,
                 Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
             };
-        
+
             let final_user_account = match user_account {
                 Some(acc) => acc,
                 None => {
@@ -281,7 +294,7 @@ pub async fn drive_auth_callback(
                     ))));
                 }
             };
-        
+
             match cloud_account {
                 Some(acc) => {
                     let mut cloud: CloudAccountActive = acc.into();
@@ -293,12 +306,10 @@ pub async fn drive_auth_callback(
                     cloud.provider = Set(entities::sea_orm_active_enums::Provider::Google);
                     cloud.user_id = Set(claims.id);
                     match cloud.update(db).await {
-                        Ok(_) => {
-                            Ok(Redirect::to(&format!(
-                                "{}/home",
-                                &ENVS.frontend_url.to_string()
-                            )))
-                        },
+                        Ok(_) => Ok(Redirect::to(&format!(
+                            "{}/home",
+                            &ENVS.frontend_url.to_string()
+                        ))),
                         Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
                     }
                 }
@@ -319,12 +330,10 @@ pub async fn drive_auth_callback(
                         ..Default::default()
                     };
                     match insert_cloud.insert(db).await {
-                        Ok(_) => {
-                            Ok(Redirect::to(&format!(
-                                "{}/home",
-                                &ENVS.frontend_url.to_string()
-                            )))
-                        },
+                        Ok(_) => Ok(Redirect::to(&format!(
+                            "{}/home",
+                            &ENVS.frontend_url.to_string()
+                        ))),
                         Err(_) => {
                             return Err(AppError::Internal(Some(String::from(
                                 "Couldn't create cloud account",

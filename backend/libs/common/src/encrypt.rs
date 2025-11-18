@@ -1,5 +1,6 @@
 use aes_gcm::{
-    AeadCore, Aes256Gcm, Error, Key, KeyInit, aead::{AeadMut, OsRng}
+    AeadCore, Aes256Gcm, Error, Key, KeyInit,
+    aead::{AeadMut, OsRng},
 };
 use thiserror::Error;
 
@@ -13,7 +14,6 @@ pub enum DecryptError {
     #[error("Invalid UTF-8 sequence in decrypted data: {0}")]
     Utf8(#[from] std::string::FromUtf8Error),
 }
-
 
 pub fn encrypt(plaintext: &str) -> Result<Vec<u8>, Error> {
     let key: &Key<Aes256Gcm> = &ENVS.encryption_key.try_into().unwrap();
