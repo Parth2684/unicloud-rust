@@ -1,4 +1,4 @@
-use crate::utils::encrypt::encrypt;
+use common::encrypt::encrypt;
 use axum::{Extension, extract::Query, response::Redirect};
 use entities::cloud_account::{
     ActiveModel as CloudAccountActive, Column as CloudAccountColumn, Entity as CloudAccountEntity,
@@ -9,26 +9,28 @@ use reqwest::Client;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, DbErr, EntityTrait, QueryFilter};
 use url::Url;
 use uuid::Uuid;
-
+use common::jwt_config::Claims;
+use common::db_connect::init_db;
+use common::export_envs::ENVS;
 use crate::{
-    handlers::auth::{jwt_config::Claims, login_with_google::AuthRequest},
-    utils::{app_errors::AppError, db_connect::init_db, export_envs::ENVS},
+    handlers::auth::{login_with_google::AuthRequest},
+    utils::app_errors::AppError
 };
 
 pub async fn drive_auth_redirect() -> Redirect {
     let auth_url = Url::parse_with_params(
         "https://accounts.google.com/o/oauth2/v2/auth",
         [
-            ("client_id", *&ENVS.google_drive_client_id.as_str()),
-            ("redirect_uri", *&ENVS.google_drive_redirect_url.as_str()),
-            ("response_type", "code"),
+            ("client_id", &ENVS.google_drive_client_id),
+            ("redirect_uri", &ENVS.google_drive_redirect_url),
+            ("response_type", &"code".to_owned()),
             (
                 "scope",
-                "openid email https://www.googleapis.com/auth/drive",
+                &"openid email https://www.googleapis.com/auth/drive".to_owned(),
             ),
-            ("access_type", "offline"),
-            ("prompt", "consent"),
-            ("include_granted_scope", "true"),
+            ("access_type", &"offline".to_owned()),
+            ("prompt", &"consent".to_owned()),
+            ("include_granted_scope", &"true".to_owned()),
         ],
     );
     match auth_url {

@@ -1,7 +1,4 @@
-use crate::handlers::auth::jwt_config::create_jwt;
 use crate::utils::app_errors::AppError;
-use crate::utils::db_connect::init_db;
-use crate::utils::export_envs::ENVS;
 use axum::response::IntoResponse;
 use axum::{extract::Query, response::Redirect};
 use axum_extra::extract::cookie::Cookie;
@@ -17,6 +14,9 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
+use common::jwt_config::create_jwt;
+use common::db_connect::init_db;
+use common::export_envs::ENVS;
 
 pub async fn google_auth_redirect() -> Redirect {
     let client_id = &ENVS.google_client_id;

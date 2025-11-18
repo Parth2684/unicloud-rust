@@ -1,4 +1,4 @@
-use crate::utils::export_envs::ENVS;
+use crate::export_envs::ENVS;
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::time::Duration;
 use tokio::sync::OnceCell;

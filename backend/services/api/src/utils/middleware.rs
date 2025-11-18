@@ -1,8 +1,8 @@
 use axum::{extract::Request, middleware::Next, response::Response};
 use axum_extra::extract::CookieJar;
+use common::jwt_config::{Claims, decode_jwt};
 
 use crate::{
-    handlers::auth::jwt_config::{Claims, decode_jwt},
     utils::app_errors::AppError,
 };
 

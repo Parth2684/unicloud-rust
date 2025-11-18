@@ -1,7 +1,8 @@
-use crate::{routers::auth_router::auth_routes, utils::export_envs::ENVS};
+use crate::{routers::auth_router::auth_routes};
 use axum::{Router, http::HeaderValue, routing::get};
 use http::Method;
 use tower_http::cors::{AllowHeaders, CorsLayer};
+use common::export_envs::ENVS;
 
 mod handlers;
 mod routers;

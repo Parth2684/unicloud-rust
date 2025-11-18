@@ -5,3 +5,4 @@ members = ["services/api", "libs/entities", "migration", "services/ws", "libs/co
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
 entities = { path = "libs/entities" }
+common = { path = "libs/common" }

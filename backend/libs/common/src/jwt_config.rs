@@ -4,8 +4,9 @@ use jsonwebtoken::{
 };
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
+use crate::export_envs::ENVS;
 
-use crate::utils::export_envs::ENVS;
+
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
