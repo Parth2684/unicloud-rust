@@ -82,7 +82,13 @@ pub async fn drive_auth_callback(
     };
 
     let access_token = match json.get("access_token") {
-        Some(token) => token.to_string(),
+        Some(token) => {
+            let token = token.as_str();
+            match token {
+                Some(t) => t.to_owned(),
+                None => return Err(AppError::Internal(Some(String::from("Error parsing access token"))))
+            }
+        },
         None => {
             return Err(AppError::Forbidden(Some(String::from(
                 "No token receiverd from google",
@@ -110,7 +116,13 @@ pub async fn drive_auth_callback(
     };
 
     let sub = match openid_res.get("sub") {
-        Some(val) => val.to_string(),
+        Some(val) => {
+            let oid = val.as_str();
+            match oid {
+                Some(id) => id.to_owned(),
+                None => return Err(AppError::Internal(Some(String::from("Error Parsing sub"))))
+            }
+        },
         None => {
             return Err(AppError::Forbidden(Some(String::from(
                 "Couldn't retrieve openid from google",
@@ -118,7 +130,13 @@ pub async fn drive_auth_callback(
         }
     };
     let email = match openid_res.get("email") {
-        Some(mail) => mail.to_string(),
+        Some(mail) => {
+            let val = mail.as_str();
+            match val {
+                Some(m) => m.to_owned(),
+                None => return Err(AppError::Internal(Some(String::from("Error parsing email"))))
+            }
+        },
         None => {
             return Err(AppError::Unauthorised(Some(String::from(
                 "Couldn't retrieve email from google",
@@ -127,115 +145,192 @@ pub async fn drive_auth_callback(
     };
 
     let encrypted_access_token = encrypt(&access_token);
+    let encrypted_access_token = match encrypted_access_token {
+        Ok(token) => token,
+        Err(err) => {
+            eprintln!("error while encrypting access token {:?}", err);
+            return Err(AppError::Internal(Some("Error while encrypting token".to_string())))
+        }
+    };
 
     let expires_in = json.get("expires_in");
-    let refresh_token = match json.get("refresh_token") {
-        Some(token) => encrypt(&token.to_string()),
-        None => {
-            return Err(AppError::Forbidden(Some(String::from(
-                "Couldn't receive refresh token from the server",
-            ))));
-        }
-    };
-
-    let (encrypted_access_token, encrypted_refresh_token) =
-        match (encrypted_access_token, refresh_token) {
-            (Ok(at), Ok(rt)) => (at, rt),
-            (Err(_at), Ok(_rt)) => {
-                return Err(AppError::Internal(Some(String::from(
-                    "Access Token failed to encrypt",
-                ))));
-            }
-            (Err(_at), Err(_rt)) => {
-                return Err(AppError::Internal(Some(String::from(
-                    "Both token failed to encrypt",
-                ))));
-            }
-            (Ok(_at), Err(_rt)) => {
-                return Err(AppError::Internal(Some(String::from(
-                    "Refresh token failed to encrypt",
-                ))));
-            }
-        };
-
-    let (cloud_account, user_account): (
-        Result<Option<CloudAccountModel>, DbErr>,
-        Result<Option<UserModel>, DbErr>,
-    ) = tokio::join!(
-        async {
-            CloudAccountEntity::find()
-                .filter(CloudAccountColumn::Sub.eq(&sub))
-                .one(db)
-                .await
-        },
-        async { UserEntity::find_by_id(claims.id).one(db).await }
-    );
-
-    let cloud_account = match cloud_account {
-        Ok(con) => con,
-        Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
-    };
-    let user_account = match user_account {
-        Ok(con) => con,
-        Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
-    };
-
-    let final_user_account = match user_account {
-        Some(acc) => acc,
-        None => {
-            return Err(AppError::Forbidden(Some(String::from(
-                "User account not found",
-            ))));
-        }
-    };
-
-    let final_cloud_account = match cloud_account {
-        Some(acc) => {
-            let mut cloud: CloudAccountActive = acc.into();
-            let owned_email = email.clone();
-            cloud.access_token = Set(encrypted_access_token);
-            cloud.refresh_token = Set(Some(encrypted_refresh_token));
-            cloud.email = Set(owned_email);
-            cloud.expires_in = Set(expires_in.and_then(|v| v.as_i64()));
-            cloud.is_primary = Set(&email == &final_user_account.gmail);
-            cloud.provider = Set(entities::sea_orm_active_enums::Provider::Google);
-            cloud.user_id = Set(claims.id);
-            let account: CloudAccountModel = match cloud.update(db).await {
-                Ok(acc) => acc,
+    match json.get("refresh_token") {
+        Some(token) => {
+            let refresh_token = token.as_str();
+            let refresh_token = match refresh_token {
+                Some(token) => encrypt(token),
+                None => return Err(AppError::Internal(Some(String::from("Error parsing refresh token"))))
+            };
+            let (cloud_account, user_account): (
+                Result<Option<CloudAccountModel>, DbErr>,
+                Result<Option<UserModel>, DbErr>,
+            ) = tokio::join!(
+                async {
+                    CloudAccountEntity::find()
+                        .filter(CloudAccountColumn::Sub.eq(&sub))
+                        .one(db)
+                        .await
+                },
+                async { UserEntity::find_by_id(claims.id).one(db).await }
+            );
+        
+            let cloud_account = match cloud_account {
+                Ok(con) => con,
                 Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
             };
-            account
-        }
-        None => {
-            let uuidv4 = Uuid::new_v4();
-            let owned_email = email.clone();
-            let owned_sub = sub.clone();
-            let insert_cloud = CloudAccountActive {
-                id: Set(uuidv4),
-                email: Set(owned_email),
-                access_token: Set(encrypted_access_token),
-                refresh_token: Set(Some(encrypted_refresh_token)),
-                expires_in: Set(expires_in.and_then(|v| v.as_i64())),
-                is_primary: Set(&email == &final_user_account.gmail),
-                provider: Set(entities::sea_orm_active_enums::Provider::Google),
-                user_id: Set(claims.id),
-                sub: Set(Some(owned_sub)),
-                ..Default::default()
+            let user_account = match user_account {
+                Ok(con) => con,
+                Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
             };
-            let account: CloudAccountModel = match insert_cloud.insert(db).await {
-                Ok(acc) => acc,
-                Err(_) => {
-                    return Err(AppError::Internal(Some(String::from(
-                        "Couldn't create cloud account",
+        
+            let final_user_account = match user_account {
+                Some(acc) => acc,
+                None => {
+                    return Err(AppError::Forbidden(Some(String::from(
+                        "User account not found",
                     ))));
                 }
             };
-            account
+            let encrypted_refresh_token = match refresh_token {
+                Ok(token) => token,
+                Err(err) => {
+                    eprintln!("error encrypting token {:?}", err);
+                    return Err(AppError::Internal(Some(String::from("Error encrypting refresh token"))))
+                }
+            };
+            match cloud_account {
+                Some(acc) => {
+                    let mut cloud: CloudAccountActive = acc.into();
+                    let owned_email = email.clone();
+                    cloud.access_token = Set(encrypted_access_token);
+                    cloud.refresh_token = Set(Some(encrypted_refresh_token));
+                    cloud.email = Set(owned_email);
+                    cloud.expires_in = Set(expires_in.and_then(|v| v.as_i64()));
+                    cloud.is_primary = Set(&email == &final_user_account.gmail);
+                    cloud.provider = Set(entities::sea_orm_active_enums::Provider::Google);
+                    cloud.user_id = Set(claims.id);
+                    let account: CloudAccountModel = match cloud.update(db).await {
+                        Ok(acc) => acc,
+                        Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
+                    };
+                    account
+                }
+                None => {
+                    let uuidv4 = Uuid::new_v4();
+                    let owned_email = email.clone();
+                    let owned_sub = sub.clone();
+                    let insert_cloud = CloudAccountActive {
+                        id: Set(uuidv4),
+                        email: Set(owned_email),
+                        access_token: Set(encrypted_access_token),
+                        refresh_token: Set(Some(encrypted_refresh_token)),
+                        expires_in: Set(expires_in.and_then(|v| v.as_i64())),
+                        is_primary: Set(&email == &final_user_account.gmail),
+                        provider: Set(entities::sea_orm_active_enums::Provider::Google),
+                        user_id: Set(claims.id),
+                        sub: Set(Some(owned_sub)),
+                        ..Default::default()
+                    };
+                    let account: CloudAccountModel = match insert_cloud.insert(db).await {
+                        Ok(acc) => acc,
+                        Err(_) => {
+                            return Err(AppError::Internal(Some(String::from(
+                                "Couldn't create cloud account",
+                            ))));
+                        }
+                    };
+                    account
+                }
+            };
+        
+            Ok(Redirect::to(&format!(
+                "{}/home",
+                &ENVS.frontend_url.to_string()
+            )))
+        },
+        None => {
+            let (cloud_account, user_account): (
+                Result<Option<CloudAccountModel>, DbErr>,
+                Result<Option<UserModel>, DbErr>,
+            ) = tokio::join!(
+                async {
+                    CloudAccountEntity::find()
+                        .filter(CloudAccountColumn::Sub.eq(&sub))
+                        .one(db)
+                        .await
+                },
+                async { UserEntity::find_by_id(claims.id).one(db).await }
+            );
+        
+            let cloud_account = match cloud_account {
+                Ok(con) => con,
+                Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
+            };
+            let user_account = match user_account {
+                Ok(con) => con,
+                Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
+            };
+        
+            let final_user_account = match user_account {
+                Some(acc) => acc,
+                None => {
+                    return Err(AppError::Forbidden(Some(String::from(
+                        "User account not found",
+                    ))));
+                }
+            };
+        
+            match cloud_account {
+                Some(acc) => {
+                    let mut cloud: CloudAccountActive = acc.into();
+                    let owned_email = email.clone();
+                    cloud.access_token = Set(encrypted_access_token);
+                    cloud.email = Set(owned_email);
+                    cloud.expires_in = Set(expires_in.and_then(|v| v.as_i64()));
+                    cloud.is_primary = Set(&email == &final_user_account.gmail);
+                    cloud.provider = Set(entities::sea_orm_active_enums::Provider::Google);
+                    cloud.user_id = Set(claims.id);
+                    match cloud.update(db).await {
+                        Ok(_) => {
+                            Ok(Redirect::to(&format!(
+                                "{}/home",
+                                &ENVS.frontend_url.to_string()
+                            )))
+                        },
+                        Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
+                    }
+                }
+                None => {
+                    let uuidv4 = Uuid::new_v4();
+                    let owned_email = email.clone();
+                    let owned_sub = sub.clone();
+                    let insert_cloud = CloudAccountActive {
+                        id: Set(uuidv4),
+                        email: Set(owned_email),
+                        access_token: Set(encrypted_access_token),
+                        refresh_token: Set(None),
+                        expires_in: Set(expires_in.and_then(|v| v.as_i64())),
+                        is_primary: Set(&email == &final_user_account.gmail),
+                        provider: Set(entities::sea_orm_active_enums::Provider::Google),
+                        user_id: Set(claims.id),
+                        sub: Set(Some(owned_sub)),
+                        ..Default::default()
+                    };
+                    match insert_cloud.insert(db).await {
+                        Ok(_) => {
+                            Ok(Redirect::to(&format!(
+                                "{}/home",
+                                &ENVS.frontend_url.to_string()
+                            )))
+                        },
+                        Err(_) => {
+                            return Err(AppError::Internal(Some(String::from(
+                                "Couldn't create cloud account",
+                            ))));
+                        }
+                    }
+                }
+            }
         }
-    };
-
-    Ok(Redirect::to(&format!(
-        "{}/home",
-        &ENVS.frontend_url.to_string()
-    )))
+    }
 }

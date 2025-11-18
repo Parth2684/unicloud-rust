@@ -3,6 +3,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use serde_json::json;
 
+#[derive(Debug)]
 pub enum AppError {
     Unauthorised(Option<String>),
     NotFound(Option<String>),
