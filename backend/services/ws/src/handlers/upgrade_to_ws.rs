@@ -14,7 +14,8 @@ use crate::AppState;
 pub async fn upgrade_to_ws(
     upgraded: Upgraded,
     state: Arc<AppState>,
-    user_id: String,
+    cloud_id: String,
+    expiry_time: i64,
 ) -> Result<(), RedisError> {
     let io = TokioIo::new(upgraded);
     let mut ws = WebSocketStream::from_raw_socket(io, Role::Server, None).await;
@@ -28,9 +29,9 @@ pub async fn upgrade_to_ws(
             }
         };
 
-        let score = Utc::now().timestamp() + 5 * 60;
+        let score = expiry_time - 5 * 60;
         let _: () = conn
-            .zadd("token_refresh_queue", &user_id, score)
+            .zadd("token_refresh_queue", &cloud_id, score)
             .await
             .unwrap();
     }
