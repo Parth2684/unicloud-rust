@@ -7,13 +7,23 @@ use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CloudExpiry {
+    pub cloud_id: String,
+    pub exp: Option<i64>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Claims {
     pub id: Uuid,
     pub quota_type: String,
     pub exp: i64,
+    pub cloud: Vec<CloudExpiry>,
 }
 
-pub fn create_jwt(id: &str, quota_type: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn create_jwt(
+    id: &str,
+    quota_type: &str,
+    cloud_expiry: Vec<CloudExpiry>,
+) -> Result<String, jsonwebtoken::errors::Error> {
     let timestamp = Utc::now() + Duration::days(7);
     let expiration = timestamp.timestamp();
     let uuid = match Uuid::parse_str(id) {
@@ -24,6 +34,7 @@ pub fn create_jwt(id: &str, quota_type: &str) -> Result<String, jsonwebtoken::er
         id: uuid,
         quota_type: quota_type.to_owned(),
         exp: expiration,
+        cloud: cloud_expiry,
     };
 
     let encoding_key = EncodingKey::from_secret(&ENVS.jwt_secret.as_bytes());

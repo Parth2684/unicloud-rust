@@ -6,7 +6,7 @@ use axum_extra::extract::cookie::CookieJar;
 use chrono::prelude::*;
 use common::db_connect::init_db;
 use common::export_envs::ENVS;
-use common::jwt_config::create_jwt;
+use common::jwt_config::{CloudExpiry, create_jwt};
 use entities::quota::{Column as QuotaColumn, Entity as QuotaEntity};
 use entities::sea_orm_active_enums::QuotaType;
 use entities::users::{Column as UserColumn, Entity as UserEntity};
@@ -81,7 +81,9 @@ pub async fn google_auth_callback(
     let json = res.json::<serde_json::Value>().await;
     let access_token = match &json {
         Ok(val) => match val.get("access_token") {
-            Some(token) => token.as_str().unwrap_or_default().to_string(),
+            Some(token) => token.as_str().ok_or(AppError::NotFound(Some(String::from(
+                "Access token not received",
+            )))),
             None => {
                 eprintln!("Access token not received, {:?}", val);
                 return Err(AppError::Internal(Some(
@@ -95,6 +97,10 @@ pub async fn google_auth_callback(
                 "Couldn't Retrieve Token from Google".to_string(),
             )));
         }
+    };
+    let access_token = match access_token {
+        Ok(str) => str.to_owned(),
+        Err(err) => return Err(err),
     };
 
     let db = init_db().await;
@@ -123,21 +129,42 @@ pub async fn google_auth_callback(
         }
     };
 
-    let email = user_info
-        .get("email")
-        .expect("Email is required for signing in");
-    let name = user_info
-        .get("given_name")
-        .expect("Name is required for signing in");
-    let image = user_info
-        .get("picture")
-        .expect("Picture is required for signing in");
-    let sub = user_info
-        .get("sub")
-        .expect("Sub should be provided from google");
+    let email = match user_info.get("email") {
+        Some(val) => match val.as_str() {
+            Some(str) => str.to_owned(),
+            None => return Err(AppError::NotFound(Some(String::from("Email not found")))),
+        },
+        None => return Err(AppError::NotFound(Some(String::from("Email not found")))),
+    };
+    let name = match user_info.get("given_name") {
+        Some(val) => match val.as_str() {
+            Some(str) => str.to_owned(),
+            None => return Err(AppError::NotFound(Some(String::from("Name not found")))),
+        },
+        None => return Err(AppError::NotFound(Some(String::from("Email not found")))),
+    };
+    let image: Option<String> = match user_info.get("picture") {
+        Some(val) => match val.as_str() {
+            Some(str) => Some(str.to_owned()),
+            None => None,
+        },
+        None => None,
+    };
+
+    let sub = match user_info.get("sub") {
+        Some(val) => match val.as_str() {
+            Some(str) => str.to_owned(),
+            None => return Err(AppError::Internal(Some("Couldn't parse sub".to_string()))),
+        },
+        None => {
+            return Err(AppError::NotFound(Some(String::from(
+                "Didn't receive sub from google",
+            ))));
+        }
+    };
 
     let db_user = UserEntity::find()
-        .filter(UserColumn::Sub.eq(sub.to_string()))
+        .filter(UserColumn::Sub.eq(&sub))
         .one(db)
         .await;
 
@@ -152,7 +179,7 @@ pub async fn google_auth_callback(
     };
 
     let cloud_accounts = cloud_account::Entity::find()
-        .filter(cloud_account::Column::Sub.eq(sub.as_str()))
+        .filter(cloud_account::Column::Sub.eq(&sub))
         .one(db)
         .await;
 
@@ -166,9 +193,9 @@ pub async fn google_auth_callback(
     let final_user = match db_user {
         Some(user_found) => {
             let mut update_user: users::ActiveModel = user_found.into();
-            update_user.gmail = Set(email.to_string());
-            update_user.name = Set(name.to_string());
-            update_user.image = Set(Some(image.to_string()));
+            update_user.gmail = Set(email.to_owned());
+            update_user.name = Set(name.to_owned());
+            update_user.image = Set(image);
             let user: users::Model = match update_user.update(db).await {
                 Ok(user) => user,
                 Err(err) => {
@@ -187,8 +214,8 @@ pub async fn google_auth_callback(
                 id: Set(uuidv4),
                 gmail: Set(email.to_string()),
                 created_at: Set(utc),
-                image: Set(Some(image.to_string())),
-                sub: Set(sub.to_string()),
+                image: Set(image),
+                sub: Set(sub),
                 name: Set(name.to_string()),
             };
             let user: users::Model = match insert_user.insert(db).await {
@@ -246,28 +273,57 @@ pub async fn google_auth_callback(
         QuotaType::Gold => "Gold",
         QuotaType::Platinum => "Platinum",
     };
-    let token = create_jwt(&final_user.id.to_string(), quota_type);
-    match token {
-        Ok(jwt) => {
-            let secure = ENVS.environment != "DEVELOPMENT";
-
-            let mut cookie = Cookie::build(("auth_token", jwt))
-                .path("/")
-                .http_only(true)
-                .same_site(axum_extra::extract::cookie::SameSite::Lax)
-                .secure(secure);
-
-            if &ENVS.environment == "production" {
-                cookie = cookie.domain(&ENVS.frontend_url);
+    let account_clouds = entities::cloud_account::Entity::find()
+        .filter(entities::cloud_account::Column::Email.eq(&final_user.gmail))
+        .all(db)
+        .await;
+    let token = match account_clouds {
+        Ok(vec) => {
+            if vec.len() > 0 && vec.iter().any(|a| a.expires_in != None) {
+                let accs: Vec<CloudExpiry> = vec
+                    .iter()
+                    .map(|v| CloudExpiry {
+                        cloud_id: v.id.to_string(),
+                        exp: v.expires_in,
+                    })
+                    .collect();
+                match create_jwt(&final_user.id.to_string(), quota_type, accs) {
+                    Ok(token) => token,
+                    Err(err) => {
+                        eprintln!("{:?}", err);
+                        return Err(AppError::Internal(Some(String::from("error creating jwt"))));
+                    }
+                }
+            } else {
+                match create_jwt(&final_user.id.to_string(), quota_type, vec![]) {
+                    Ok(token) => token,
+                    Err(err) => {
+                        eprintln!("{:?}", err);
+                        return Err(AppError::Internal(Some(String::from("Error creating jwt"))));
+                    }
+                }
             }
-            jar = jar.clone().add(cookie);
-            Ok((jar, Redirect::to(&format!("{}/home", &ENVS.frontend_url))).into_response())
         }
         Err(err) => {
-            eprintln!("{err:?}");
-            Err(AppError::Internal(Some(String::from(
-                "Could not generate token",
-            ))))
+            eprintln!("{:?}", err);
+            return Err(AppError::Internal(Some(String::from(
+                "Error connecting to db",
+            ))));
+        }
+    };
+    let secure = ENVS.environment != "DEVELOPMENT";
+
+    let mut cookie = Cookie::build(("auth_token", token))
+        .path("/")
+        .http_only(true)
+        .same_site(axum_extra::extract::cookie::SameSite::Lax)
+        .secure(secure);
+
+    if &ENVS.environment == "production" {
+        if let Some(x) = &ENVS.domain {
+            cookie = cookie.domain(x);
         }
     }
+    jar = jar.clone().add(cookie);
+    Ok((jar, Redirect::to(&format!("{}/home", &ENVS.frontend_url))).into_response())
 }

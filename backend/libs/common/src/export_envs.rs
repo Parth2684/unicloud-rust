@@ -14,6 +14,8 @@ pub struct Envs {
     pub google_drive_client_secret: String,
     pub google_drive_redirect_url: String,
     pub encryption_key: [u8; 32],
+    pub redis_url: String,
+    pub domain: Option<String>,
 }
 
 pub static ENVS: Lazy<Envs> = Lazy::new(|| {
@@ -46,6 +48,9 @@ pub static ENVS: Lazy<Envs> = Lazy::new(|| {
         }
     };
 
+    let redis_url = dotenvy::var("REDIS_URL").expect("Redis url must be present");
+    let domain = dotenvy::var("DOMAIN").ok();
+
     Envs {
         database_url,
         google_client_id,
@@ -59,5 +64,7 @@ pub static ENVS: Lazy<Envs> = Lazy::new(|| {
         google_drive_client_secret,
         google_drive_redirect_url,
         encryption_key,
+        redis_url,
+        domain
     }
 });
