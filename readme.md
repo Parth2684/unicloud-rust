@@ -45,14 +45,6 @@ This project is a monorepo consisting of separate frontend and backend component
 3.  Set up environment variables by copying `.env.example` in `backend` to `.env` and filling in the required values.
 
 4.  To migrate database and generate entities follow the instructions in `backend/migrations/src/main.rs` and run commands from the `backend folder`.
-5.  To run HTTP server
-    ```bash
-    cargo run -p api
-    ```
-    To run WebSocket server
-    ```bash
-    cargo run -p ws
-    ```
 ### Frontend
 
 1.  Navigate to the frontend directory:
@@ -75,13 +67,11 @@ From the `backend` directory:
 
 1.  To run the API service:
     ```bash
-    cd services/api
-    cargo run
+    cargo run -p api
     ```
 2.  To run the WebSocket service:
     ```bash
-    cd services/ws
-    cargo run
+    cargo run -p ws
     ```
 
 ### Running the Frontend
