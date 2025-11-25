@@ -9,23 +9,25 @@ use tokio::net::TcpStream;
 use tokio_tungstenite::{
     accept_hdr_async,
     tungstenite::{
-        Message,
+        Message, Utf8Bytes,
         handshake::server::{Request, Response},
     },
 };
 use url::Url;
 
 type Tx = UnboundedSender<Message>;
-type PeerMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
+pub type PeerMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
 
 pub async fn accept_connection(stream: TcpStream, peer_map: PeerMap, addr: SocketAddr) {
     let request_url = Arc::new(Mutex::new(None::<Url>));
     let url_store = request_url.clone();
 
     let callback = move |req: &Request, res: Response| {
-        let url = req.uri().to_string();
+        let url = req.uri();
+        let full_url = format!("ws://127.0.0.1:8080{:?}", url);
+        println!("{full_url:?}");
 
-        match Url::parse(&url) {
+        match Url::parse(&full_url) {
             Ok(parsed) => {
                 if let Ok(mut guard) = url_store.lock() {
                     *guard = Some(parsed);
@@ -39,10 +41,13 @@ pub async fn accept_connection(stream: TcpStream, peer_map: PeerMap, addr: Socke
                 Ok(res)
             }
 
-            Err(_) => Err(Response::builder()
-                .status(400)
-                .body(Some("Invalid Url".into()))
-                .unwrap()),
+            Err(err) => {
+                eprintln!("{err:?}");
+                Err(Response::builder()
+                    .status(400)
+                    .body(Some("Invalid Url".into()))
+                    .unwrap())
+            }
         }
     };
 
@@ -90,7 +95,32 @@ pub async fn accept_connection(stream: TcpStream, peer_map: PeerMap, addr: Socke
             };
             peermap_clone.insert(addr, tx);
 
-            let (outgoing, incoming) = ws_stream.split();
+            let (mut sender, mut receiver) = ws_stream.split();
+
+            while let Some(msg) = receiver.next().await {
+                let msg = match msg {
+                    Ok(m) => m,
+                    Err(e) => {
+                        eprintln!("{e:?}");
+                        break;
+                    }
+                };
+                if msg.is_text() {
+                    let text = msg.to_text();
+                    let text = match text {
+                        Ok(str) => str.to_owned(),
+                        Err(err) => {
+                            eprintln!("{err:?}");
+                            sender
+                                .send(Message::Text(Utf8Bytes::from(format!("Server got {err}"))))
+                                .await
+                                .ok();
+                            break;
+                        }
+                    };
+                    if text == String::from("Refresh Token") {}
+                }
+            }
         }
     }
 }

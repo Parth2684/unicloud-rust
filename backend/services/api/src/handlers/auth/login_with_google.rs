@@ -6,7 +6,7 @@ use axum_extra::extract::cookie::CookieJar;
 use chrono::prelude::*;
 use common::db_connect::init_db;
 use common::export_envs::ENVS;
-use common::jwt_config::{CloudExpiry, create_jwt};
+use common::jwt_config::create_jwt;
 use entities::quota::{Column as QuotaColumn, Entity as QuotaEntity};
 use entities::sea_orm_active_enums::QuotaType;
 use entities::users::{Column as UserColumn, Entity as UserEntity};
@@ -273,44 +273,15 @@ pub async fn google_auth_callback(
         QuotaType::Gold => "Gold",
         QuotaType::Platinum => "Platinum",
     };
-    let account_clouds = entities::cloud_account::Entity::find()
-        .filter(entities::cloud_account::Column::Email.eq(&final_user.gmail))
-        .all(db)
-        .await;
-    let token = match account_clouds {
-        Ok(vec) => {
-            if vec.len() > 0 && vec.iter().any(|a| a.expires_in != None) {
-                let accs: Vec<CloudExpiry> = vec
-                    .iter()
-                    .map(|v| CloudExpiry {
-                        cloud_id: v.id.to_string(),
-                        exp: v.expires_in,
-                    })
-                    .collect();
-                match create_jwt(&final_user.id.to_string(), quota_type, accs) {
-                    Ok(token) => token,
-                    Err(err) => {
-                        eprintln!("{:?}", err);
-                        return Err(AppError::Internal(Some(String::from("error creating jwt"))));
-                    }
-                }
-            } else {
-                match create_jwt(&final_user.id.to_string(), quota_type, vec![]) {
-                    Ok(token) => token,
-                    Err(err) => {
-                        eprintln!("{:?}", err);
-                        return Err(AppError::Internal(Some(String::from("Error creating jwt"))));
-                    }
-                }
-            }
-        }
+
+    let token = match create_jwt(&final_user.id.to_string(), quota_type) {
+        Ok(token) => token,
         Err(err) => {
             eprintln!("{:?}", err);
-            return Err(AppError::Internal(Some(String::from(
-                "Error connecting to db",
-            ))));
+            return Err(AppError::Internal(Some(String::from("error creating jwt"))));
         }
     };
+
     let secure = ENVS.environment != "DEVELOPMENT";
 
     let mut cookie = Cookie::build(("auth_token", token))
