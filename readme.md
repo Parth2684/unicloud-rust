@@ -50,7 +50,7 @@ This project is a monorepo consisting of separate frontend and backend component
     cargo run -p api
     ```
     To run WebSocket server
-    '''bash
+    ```bash
     cargo run -p ws
     ```
 ### Frontend
