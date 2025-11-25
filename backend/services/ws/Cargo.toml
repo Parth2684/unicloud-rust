@@ -4,3 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+tokio-tungstenite = { version = "0.28.0", features = ["native-tls"] }
+tokio = { workspace = true }
+common = { workspace = true }
+futures-channel = "0.3.31"
+url = "2.5.7"
