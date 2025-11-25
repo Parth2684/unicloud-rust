@@ -65,6 +65,6 @@ pub static ENVS: Lazy<Envs> = Lazy::new(|| {
         google_drive_redirect_url,
         encryption_key,
         redis_url,
-        domain
+        domain,
     }
 });
