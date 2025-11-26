@@ -1,4 +1,4 @@
-# Unicloud Rust
+# Unicloud
 
 > A monorepo containing a under-developing full-stack application that provides services for managing cloud accounts securely. It features a robust Rust backend with a RESTful API and WebSocket capabilities, coupled with a modern Next.js frontend.
 
