@@ -23,6 +23,8 @@ pub struct Model {
     pub expires_in: Option<i64>,
     #[sea_orm(unique)]
     pub sub: Option<String>,
+    pub token_expired: bool,
+    pub updated_at: Option<DateTime>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

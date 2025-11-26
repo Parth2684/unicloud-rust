@@ -1,6 +1,11 @@
 use crate::handlers::ws_handle::{PeerMap, accept_connection};
 use common::export_envs::ENVS;
-use std::{collections::HashMap, fmt::Error, sync::{Arc, Mutex}};
+use redis::aio::ConnectionManager;
+use std::{
+    collections::HashMap,
+    fmt::Error,
+    sync::{Arc, Mutex},
+};
 use tokio::net::TcpListener;
 
 mod handlers;
@@ -14,15 +19,19 @@ async fn main() -> Result<(), Error> {
     println!("Listeneing on {:?}", addr);
     let redis_url = &ENVS.redis_url.to_owned();
     let redis_client = redis::Client::open(redis_url.as_str()).unwrap();
-    let redis_conn = redis_client.get_connection_manager().await.unwrap();
-    let redis_conn = Arc::new(Mutex::new(redis_conn));
-
+    let manager = ConnectionManager::new(redis_client).await.unwrap();
+    let redis = Arc::new(manager);
+    
+    
     while let Ok((stream, addr)) = listner.accept().await {
-        tokio::spawn(accept_connection(
+        let conn = Arc::clone(&redis);
+
+        tokio::spawn(
+            accept_connection(
             stream,
             state.clone(),
             addr,
-            redis_conn.clone(),
+            conn,
         ));
     }
     Ok(())
