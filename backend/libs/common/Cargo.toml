@@ -16,5 +16,6 @@ serde = { workspace = true }
 uuid = { version = "1.18.1", features = ["v4"] }
 jsonwebtoken = { version = "10.2.0", features = ["rust_crypto"] }
 chrono = "0.4.42"
+redis = "0.32.7"
 
 

@@ -1,7 +1,7 @@
 use common::jwt_config::decode_jwt;
 use futures_channel::mpsc::{UnboundedSender, unbounded};
 use futures_util::{SinkExt, StreamExt};
-use redis::{Client, TypedCommands};
+use redis::{Client, TypedCommands, aio::ConnectionManager};
 use std::{
     collections::HashMap,
     net::SocketAddr,
@@ -24,7 +24,7 @@ pub async fn accept_connection(
     stream: TcpStream,
     peer_map: PeerMap,
     addr: SocketAddr,
-    redis_client: Client,
+    conn: Arc<Mutex<ConnectionManager>>,
 ) {
     let request_url = Arc::new(Mutex::new(None::<Url>));
     let url_store = request_url.clone();
@@ -93,14 +93,16 @@ pub async fn accept_connection(
             };
 
             let (tx, rx) = unbounded();
-            let mut peermap_clone = match peer_map.lock() {
-                Ok(peer) => peer.clone(),
+            match peer_map.lock() {
+                Ok(peer) => match peer.insert(addr, tx) {
+                    Some(peer) => peer,
+                    None => return
+                },
                 Err(err) => {
                     eprintln!("{err:?}");
                     return;
                 }
             };
-            peermap_clone.insert(addr, tx);
 
             let (mut sender, mut receiver) = ws_stream.split();
 
@@ -139,29 +141,41 @@ pub async fn accept_connection(
                         }
                     };
 
-                    let mut conn = redis_client.get_connection().unwrap();
+                    let mut conn = match conn.lock() {
+                        Ok(conn) => conn,
+                        Err(err) => {
+                            eprintln!("poison error, {err:?}");
+                            break;
+                        }
+                    };
                     if text == String::from("Refresh Token") {
-                        let added = match conn.hset_nx(
-                            "dedupe:queue",
-                            "userid",
-                            claims.id.to_string(),
-                        ) {
-                            Ok(red) => red,
+                        let added: Result<bool, redis::RedisError> = redis::cmd("HSETNX")
+                            .arg("dedupe:queue")
+                            .arg("userid")
+                            .arg(claims.id)
+                            .query_async(&mut *conn)
+                            .await;
+                        
+                        match added {
+                            Ok(add) => {
+                                if add {
+                                    let _ = conn.lpush("refreshtoken:queue", claims.id.to_string());
+                                }
+                            },
                             Err(err) => {
-                                eprintln!("{err:?}");
-                                sender
-                                    .send(Message::Text(Utf8Bytes::from(String::from(
-                                        "Refreshing token failed due to connection error for redis",
-                                    ))))
-                                    .await
-                                    .ok();
+                                eprintln!("error connecting to redis {err}");
                                 break;
                             }
-                        };
-                        if added {
-                            let _ = conn.lpush("refreshtoken:queue", claims.id.to_string());
                         }
+                        
                     }
+                }    
+            }
+            match peer_map.lock() {
+                Ok(peer) => peer.remove(&addr),
+                Err(err) => {
+                    eprintln!("{err:?}");
+                    return
                 }
             }
         }

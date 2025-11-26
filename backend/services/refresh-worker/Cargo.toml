@@ -4,3 +4,12 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+redis = { version = "0.32.7", features = ["connection-manager"] }
+common = { workspace = true }
+tokio = { workspace = true }
+uuid = { version = "1.18.1", features = ["v4"] }
+entities = { workspace = true }
+sea-orm = { version = "2.0.0-rc.16", features = [ "sqlx-postgres", "runtime-async-std-native-tls", "macros" ] }
+chrono = "0.4.42"
+reqwest = "0.12.24"
+serde = { workspace = true }
