@@ -1,5 +1,7 @@
+use common::jwt_config::decode_jwt;
 use futures_channel::mpsc::{UnboundedSender, unbounded};
 use futures_util::{SinkExt, StreamExt};
+use redis::{Client, TypedCommands};
 use std::{
     collections::HashMap,
     net::SocketAddr,
@@ -18,7 +20,12 @@ use url::Url;
 type Tx = UnboundedSender<Message>;
 pub type PeerMap = Arc<Mutex<HashMap<SocketAddr, Tx>>>;
 
-pub async fn accept_connection(stream: TcpStream, peer_map: PeerMap, addr: SocketAddr) {
+pub async fn accept_connection(
+    stream: TcpStream,
+    peer_map: PeerMap,
+    addr: SocketAddr,
+    redis_client: Client,
+) {
     let request_url = Arc::new(Mutex::new(None::<Url>));
     let url_store = request_url.clone();
 
@@ -98,6 +105,19 @@ pub async fn accept_connection(stream: TcpStream, peer_map: PeerMap, addr: Socke
             let (mut sender, mut receiver) = ws_stream.split();
 
             while let Some(msg) = receiver.next().await {
+                let claims = match decode_jwt(&token) {
+                    Ok(claim) => claim,
+                    Err(err) => {
+                        eprintln!("error decoding jwt: {}", err);
+                        sender
+                            .send(Message::Text(Utf8Bytes::from(String::from(
+                                "Error Validating User from the websocket server",
+                            ))))
+                            .await
+                            .ok();
+                        break;
+                    }
+                };
                 let msg = match msg {
                     Ok(m) => m,
                     Err(e) => {
@@ -118,7 +138,30 @@ pub async fn accept_connection(stream: TcpStream, peer_map: PeerMap, addr: Socke
                             break;
                         }
                     };
-                    if text == String::from("Refresh Token") {}
+
+                    let mut conn = redis_client.get_connection().unwrap();
+                    if text == String::from("Refresh Token") {
+                        let added = match conn.hset_nx(
+                            "dedupe:queue",
+                            "userid",
+                            claims.id.to_string(),
+                        ) {
+                            Ok(red) => red,
+                            Err(err) => {
+                                eprintln!("{err:?}");
+                                sender
+                                    .send(Message::Text(Utf8Bytes::from(String::from(
+                                        "Refreshing token failed due to connection error for redis",
+                                    ))))
+                                    .await
+                                    .ok();
+                                break;
+                            }
+                        };
+                        if added {
+                            let _ = conn.lpush("refreshtoken:queue", claims.id.to_string());
+                        }
+                    }
                 }
             }
         }

@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["services/api", "libs/entities", "migration", "services/ws", "libs/common"]
+members = ["services/api", "libs/entities", "migration", "services/ws", "libs/common", "services/refresh-worker"]
 
 [workspace.dependencies]
 tokio = { version = "1", features = ["full"] }
