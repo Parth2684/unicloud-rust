@@ -31,7 +31,7 @@ pub fn encrypt(plaintext: &str) -> Result<Vec<u8>, Error> {
     Ok(concat_nonce_cipher)
 }
 
-pub fn decrypt(data: Vec<u8>) -> Result<String, DecryptError> {
+pub fn decrypt(data: &Vec<u8>) -> Result<String, DecryptError> {
     let key: &Key<Aes256Gcm> = &ENVS.encryption_key.try_into().unwrap();
     let mut cipher = Aes256Gcm::new(&key);
     let (nonce_bytes, ciphertext) = data.split_at(12);

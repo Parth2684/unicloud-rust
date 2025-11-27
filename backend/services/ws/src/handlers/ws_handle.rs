@@ -1,7 +1,7 @@
 use common::jwt_config::decode_jwt;
 use futures_channel::mpsc::{UnboundedSender, unbounded};
 use futures_util::{SinkExt, StreamExt};
-use redis::{aio::ConnectionManager};
+use redis::{AsyncTypedCommands, aio::ConnectionManager};
 use std::{
     collections::HashMap,
     net::SocketAddr,
@@ -147,21 +147,23 @@ pub async fn accept_connection(
                             None => return,
                             Some(clo) => clo
                         };
-                        let added: Result<bool, redis::RedisError> = redis::cmd("HSETNX")
-                            .arg("dedupe:queue")
-                            .arg("userid")
-                            .arg(claims.id.to_string())
-                            .query_async(redis_clone)
-                            .await;
+                        // let added: Result<bool, redis::RedisError> = redis::cmd("HSETNX")
+                        //     .arg("dedupe:queue")
+                        //     .arg("userid")
+                        //     .arg(claims.id.to_string())
+                        //     .query_async(redis_clone)
+                        //     .await;
+                        let added = redis_clone.hset_nx("dedupe:queue", claims.id.to_string(),  "1").await;
 
                         match added {
                             Ok(add) => {
                                 if add {
-                                    let _: Result<isize, redis::RedisError> = redis::cmd("LPUSH")
-                                        .arg("refreshtoken:queue")
-                                        .arg(claims.id.to_string())
-                                        .query_async(redis_clone)
-                                        .await;
+                                    // let _: Result<isize, redis::RedisError> = redis::cmd("LPUSH")
+                                    //     .arg("refreshtoken:queue")
+                                    //     .arg(claims.id.to_string())
+                                    //     .query_async(redis_clone)
+                                    //     .await;
+                                    let _ = redis_clone.lpush("refresh:queue", claims.id.to_string()).await;
                                 }
                             }
                             Err(err) => {
