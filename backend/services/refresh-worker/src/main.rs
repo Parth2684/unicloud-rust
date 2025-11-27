@@ -20,14 +20,14 @@ async fn main() {
         let result = match result {
             Ok(some_str) => match some_str {
                 Some(str) => str,
-                None => continue
+                None => continue,
             },
             Err(err) => {
                 eprintln!("{err:?}");
                 continue;
             }
         };
-        
+
         let id = match Uuid::parse_str(&result) {
             Ok(uid) => uid,
             Err(err) => {
@@ -35,7 +35,7 @@ async fn main() {
                 continue;
             }
         };
-        
+
         let should_retry = handle_refresh(id, db).await;
         if !should_retry {
             redis_conn.lrem("refreshtoken:queue", 1, &result).await.ok();

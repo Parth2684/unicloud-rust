@@ -141,11 +141,10 @@ pub async fn accept_connection(
                         }
                     };
 
-                    
                     if text == String::from("Refresh Token") {
                         let redis_clone = match Arc::get_mut(&mut conn) {
                             None => return,
-                            Some(clo) => clo
+                            Some(clo) => clo,
                         };
                         // let added: Result<bool, redis::RedisError> = redis::cmd("HSETNX")
                         //     .arg("dedupe:queue")
@@ -153,7 +152,9 @@ pub async fn accept_connection(
                         //     .arg(claims.id.to_string())
                         //     .query_async(redis_clone)
                         //     .await;
-                        let added = redis_clone.hset_nx("dedupe:queue", claims.id.to_string(),  "1").await;
+                        let added = redis_clone
+                            .hset_nx("dedupe:queue", claims.id.to_string(), "1")
+                            .await;
 
                         match added {
                             Ok(add) => {
@@ -163,7 +164,9 @@ pub async fn accept_connection(
                                     //     .arg(claims.id.to_string())
                                     //     .query_async(redis_clone)
                                     //     .await;
-                                    let _ = redis_clone.lpush("refresh:queue", claims.id.to_string()).await;
+                                    let _ = redis_clone
+                                        .lpush("refresh:queue", claims.id.to_string())
+                                        .await;
                                 }
                             }
                             Err(err) => {

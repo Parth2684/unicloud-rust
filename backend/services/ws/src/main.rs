@@ -21,18 +21,11 @@ async fn main() -> Result<(), Error> {
     let redis_client = redis::Client::open(redis_url.as_str()).unwrap();
     let manager = ConnectionManager::new(redis_client).await.unwrap();
     let redis = Arc::new(manager);
-    
-    
+
     while let Ok((stream, addr)) = listner.accept().await {
         let conn = Arc::clone(&redis);
 
-        tokio::spawn(
-            accept_connection(
-            stream,
-            state.clone(),
-            addr,
-            conn,
-        ));
+        tokio::spawn(accept_connection(stream, state.clone(), addr, conn));
     }
     Ok(())
 }

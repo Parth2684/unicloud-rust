@@ -11,10 +11,11 @@ use entities::{
     sea_orm_active_enums::Provider,
 };
 use reqwest::StatusCode;
-use sea_orm::{ActiveValue::Set, DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait, ActiveModelTrait};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
+};
 use serde::Deserialize;
 use uuid::Uuid;
-
 
 #[derive(Deserialize)]
 struct GoogleResponse {
@@ -25,7 +26,7 @@ struct GoogleResponse {
 #[derive(Debug, Deserialize)]
 struct GoogleError {
     error: String,
-    error_description: String
+    error_description: String,
 }
 
 pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
@@ -53,7 +54,7 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
         if acc.provider == Provider::Google && acc.expires_in < Some(time) {
             let encrypt_refresh = match &acc.refresh_token {
                 Some(token) => token,
-                None => continue
+                None => continue,
             };
             let refresh_token = match decrypt(encrypt_refresh) {
                 Ok(token) => token,
@@ -77,12 +78,15 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
 
             match res {
                 Ok(data) => {
-                    let json: Result<Result<GoogleResponse, GoogleError>, reqwest::Error> = data.json().await;
+                    let json: Result<Result<GoogleResponse, GoogleError>, reqwest::Error> =
+                        data.json().await;
                     let final_json = match json {
                         Ok(json) => match json {
                             Ok(res) => res,
                             Err(err) => {
-                                if err.error == "invalid_grant" && err.error_description == "Token has been expired or revoked." {
+                                if err.error == "invalid_grant"
+                                    && err.error_description == "Token has been expired or revoked."
+                                {
                                     let mut acc: CloudAccountActive = acc.into();
                                     acc.token_expired = Set(true);
                                     let _ = acc.update(db).await.ok();
@@ -94,7 +98,7 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                             eprintln!("{err:?}");
                             continue;
                         }
-                    } ;
+                    };
                     let mut acc: CloudAccountActive = acc.into();
                     let access_token = final_json.access_token;
                     let encrypted_token = match encrypt(&access_token) {
