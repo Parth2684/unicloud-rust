@@ -15,11 +15,15 @@ async fn main() {
 
     loop {
         let result: Result<Option<String>, RedisError> = redis_conn
-            .brpoplpush("refreshtoken:queue", "refreshtoken:queue", 1.0)
+            .brpoplpush("refresh:queue", "refresh:queue", 1.0)
             .await;
+        
         let result = match result {
             Ok(some_str) => match some_str {
-                Some(str) => str,
+                Some(str) => {
+                    println!("{str:?}");
+                    str
+                },
                 None => continue,
             },
             Err(err) => {
@@ -27,7 +31,7 @@ async fn main() {
                 continue;
             }
         };
-
+        println!("31");
         let id = match Uuid::parse_str(&result) {
             Ok(uid) => uid,
             Err(err) => {
@@ -38,7 +42,7 @@ async fn main() {
 
         let should_retry = handle_refresh(id, db).await;
         if !should_retry {
-            redis_conn.lrem("refreshtoken:queue", 1, &result).await.ok();
+            redis_conn.lrem("refresh:queue", 1, &result).await.ok();
             redis_conn.hdel("dedupe:queue", &result).await.ok();
         }
     }

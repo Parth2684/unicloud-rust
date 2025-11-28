@@ -6,35 +6,46 @@ use common::{
 use entities::{
     cloud_account::{
         ActiveModel as CloudAccountActive, Column as CloudAccountColumn,
-        Entity as CloudAccountEntity, Model,
+        Entity as CloudAccountEntity,
     },
     sea_orm_active_enums::Provider,
 };
-use reqwest::StatusCode;
 use sea_orm::{
     ActiveModelTrait, ActiveValue::Set, ColumnTrait, DatabaseConnection, EntityTrait, QueryFilter,
 };
 use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(Deserialize)]
-struct GoogleResponse {
-    access_token: String,
-    expires_in: i64,
-    refresh_token: Option<String>,
+#[derive(serde::Deserialize, Debug)]
+pub struct GoogleResponse {
+    pub access_token: String,
+    pub expires_in: i64,
+    pub refresh_token: Option<String>,
+    pub scope: String,
+    pub token_type: String,
 }
-#[derive(Debug, Deserialize)]
-struct GoogleError {
-    error: String,
-    error_description: String,
+
+#[derive(serde::Deserialize, Debug)]
+pub struct GoogleError {
+    pub error: String,
+    pub error_description: String,
+}
+
+#[derive(serde::Deserialize, Debug)]
+#[serde(untagged)] // <-- IMPORTANT
+pub enum GoogleResult {
+    Ok(GoogleResponse),
+    Err(GoogleError),
 }
 
 pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
     let mut should_retry = false;
+    println!("{id}");
     let cloud_accs = CloudAccountEntity::find()
         .filter(CloudAccountColumn::UserId.eq(id))
         .all(db)
         .await;
+    println!("38");
     let cloud_accs = match cloud_accs {
         Ok(accs) => accs,
         Err(err) => {
@@ -43,19 +54,26 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
             return true;
         }
     };
-
+    println!("47");
     if cloud_accs.is_empty() {
+        println!("49");
         return false;
     }
     let time = Utc::now();
     let time = time.timestamp() - 300;
 
     for acc in cloud_accs {
-        if acc.provider == Provider::Google && acc.expires_in < Some(time) {
+        println!("56");
+        if acc.provider == Provider::Google && acc.expires_in < Some(time) && !acc.token_expired {
+            println!("58");
             let encrypt_refresh = match &acc.refresh_token {
-                Some(token) => token,
+                Some(token) => {
+                    println!("{token:?}");
+                    token
+                },
                 None => continue,
             };
+            println!("62 {encrypt_refresh:?}");
             let refresh_token = match decrypt(encrypt_refresh) {
                 Ok(token) => token,
                 Err(err) => {
@@ -63,9 +81,10 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                     continue;
                 }
             };
+            println!("70 {refresh_token:?}");
 
             let client = reqwest::Client::new();
-            let res = client
+            let res: Result<reqwest::Response, reqwest::Error> = client
                 .post(String::from("https://oauth2.googleapis.com/token"))
                 .form(&[
                     ("client_id", &ENVS.google_drive_client_id.as_str()),
@@ -78,12 +97,12 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
 
             match res {
                 Ok(data) => {
-                    let json: Result<Result<GoogleResponse, GoogleError>, reqwest::Error> =
+                    let json: Result<GoogleResult, reqwest::Error> =
                         data.json().await;
                     let final_json = match json {
                         Ok(json) => match json {
-                            Ok(res) => res,
-                            Err(err) => {
+                            GoogleResult::Ok(res) => res,
+                            GoogleResult::Err(err) => {
                                 if err.error == "invalid_grant"
                                     && err.error_description == "Token has been expired or revoked."
                                 {
@@ -95,7 +114,7 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                             }
                         },
                         Err(err) => {
-                            eprintln!("{err:?}");
+                            eprintln!("error parsing {err:?}");
                             continue;
                         }
                     };
@@ -104,20 +123,48 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                     let encrypted_token = match encrypt(&access_token) {
                         Ok(token) => token,
                         Err(err) => {
-                            eprintln!("{err}");
+                            eprintln!("error encoding token {err}");
                             continue;
                         }
                     };
-                    let current_time = Utc::now().naive_utc();
-                    acc.access_token = Set(encrypted_token);
-                    acc.updated_at = Set(Some(current_time));
-                    acc.token_expired = Set(false);
-                    match acc.update(db).await {
-                        Ok(_) => (),
-                        Err(err) => {
-                            eprintln!("{err:?}");
-                            should_retry = true;
-                            continue;
+                    match final_json.refresh_token {
+                        Some(tok) => match encrypt(&tok) {
+                            Ok(refreshed) => {
+                                let current_time = Utc::now().naive_utc();
+                                acc.access_token = Set(encrypted_token);
+                                acc.updated_at = Set(Some(current_time));
+                                acc.token_expired = Set(false);
+                                acc.expires_in = Set(Some(final_json.expires_in));
+                                acc.refresh_token = Set(Some(refreshed));
+                                match acc.update(db).await {
+                                    Ok(_) => (),
+                                    Err(err) => {
+                                        eprintln!("error updating db {err:?}");
+                                        should_retry = true;
+                                        continue;
+                                    }
+                                }
+                            }
+                            Err(err) => {
+                                eprintln!("error encrypting refresh token {err}");
+                                should_retry = true;
+                                continue;
+                            }
+                        },
+                        None => {
+                            let current_time = Utc::now().naive_utc();
+                            acc.access_token = Set(encrypted_token);
+                            acc.updated_at = Set(Some(current_time));
+                            acc.token_expired = Set(false);
+                            acc.expires_in = Set(Some(final_json.expires_in));
+                            match acc.update(db).await {
+                                Ok(_) => (),
+                                Err(err) => {
+                                    eprintln!("line 147 {err:?}");
+                                    should_retry = true;
+                                    continue;
+                                }
+                            }
                         }
                     }
                 }
@@ -128,5 +175,6 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
             }
         }
     }
+    println!("reached end");
     should_retry
 }
