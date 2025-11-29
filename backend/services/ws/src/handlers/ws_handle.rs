@@ -32,21 +32,17 @@ pub async fn accept_connection(
     let callback = move |req: &Request, res: Response| {
         let url = req.uri();
         let full_url = format!("ws://127.0.0.1:8080{}", url);
-        println!("{full_url:?}");
 
         match Url::parse(&full_url) {
             Ok(parsed) => {
-                println!("line 39");
                 if let Ok(mut guard) = url_store.lock() {
                     *guard = Some(parsed);
                 } else {
-                    println!("line 43");
                     return Err(Response::builder()
                         .status(500)
                         .body(Some("Internal lock error".into()))
                         .unwrap());
                 }
-                println!("line 49");
                 Ok(res)
             }
 
@@ -59,7 +55,6 @@ pub async fn accept_connection(
             }
         }
     };
-    
 
     let ws_stream = match accept_hdr_async(stream, callback).await {
         Ok(ws) => ws,
@@ -68,8 +63,7 @@ pub async fn accept_connection(
             return;
         }
     };
-    
-    println!("72");
+
 
     let url_opt = {
         match request_url.lock() {
@@ -89,7 +83,6 @@ pub async fn accept_connection(
             let queries = url.query_pairs();
 
             for query in queries {
-                println!("query {query:?}");
                 pairs.insert(query.0.to_string(), query.1.to_string());
             }
 
@@ -97,7 +90,6 @@ pub async fn accept_connection(
                 None => return,
                 Some(tok) => tok.to_owned(),
             };
-            println!("token 96, {token}");
 
             let (tx, rx) = unbounded();
             match peer_map.lock() {
@@ -109,12 +101,10 @@ pub async fn accept_connection(
                     return;
                 }
             }
-            println!("112");
 
             let (mut sender, mut receiver) = ws_stream.split();
 
             while let Some(msg) = receiver.next().await {
-                println!("116");
                 let claims = match decode_jwt(&token) {
                     Ok(claim) => claim,
                     Err(err) => {
@@ -137,11 +127,9 @@ pub async fn accept_connection(
                 };
                 if msg.is_text() {
                     let text = msg.to_text();
-                    println!("text 1st {:?}", text);
                     let text = match text {
                         Ok(str) => str.to_owned(),
                         Err(err) => {
-                            eprintln!("{err:?}");
                             sender
                                 .send(Message::Text(Utf8Bytes::from(format!("Server got {err}"))))
                                 .await
@@ -149,11 +137,8 @@ pub async fn accept_connection(
                             break;
                         }
                     };
-                    println!("text before if{}", text);
                     if text == String::from("Refresh Token") {
-                        println!("text after if {}", text);
                         let redis_clone = Arc::make_mut(&mut conn);
-                        println!("159");
                         // let added: Result<bool, redis::RedisError> = redis::cmd("HSETNX")
                         //     .arg("dedupe:queue")
                         //     .arg("userid")
@@ -163,7 +148,6 @@ pub async fn accept_connection(
                         let added = redis_clone
                             .hset_nx("dedupe:queue", claims.id.to_string(), "1")
                             .await;
-                        println!("166");
                         match added {
                             Ok(add) => {
                                 if add {

@@ -183,18 +183,20 @@ pub async fn google_auth_callback(
         .one(db)
         .await;
 
-    if let Ok(Some(_)) = cloud_accounts {
-        return Err(AppError::Forbidden(Some(
-            "You Cannot Signin with this account as it was added by a different account"
-                .to_string(),
-        )));
+    if let Ok(Some(acc)) = cloud_accounts {
+        if !acc.is_primary {
+            return Err(AppError::Forbidden(Some(
+                "You Cannot Signin with this account as it was added by a different account"
+                    .to_string(),
+            )));
+        }
     }
 
     let final_user = match db_user {
         Some(user_found) => {
             let mut update_user: users::ActiveModel = user_found.into();
-            update_user.gmail = Set(email.to_owned());
-            update_user.name = Set(name.to_owned());
+            update_user.gmail = Set(email);
+            update_user.name = Set(name);
             update_user.image = Set(image);
             let user: users::Model = match update_user.update(db).await {
                 Ok(user) => user,
@@ -212,11 +214,11 @@ pub async fn google_auth_callback(
             let utc = Utc::now().naive_utc();
             let insert_user = users::ActiveModel {
                 id: Set(uuidv4),
-                gmail: Set(email.to_string()),
+                gmail: Set(email),
                 created_at: Set(utc),
                 image: Set(image),
                 sub: Set(sub),
-                name: Set(name.to_string()),
+                name: Set(name),
             };
             let user: users::Model = match insert_user.insert(db).await {
                 Ok(user) => user,

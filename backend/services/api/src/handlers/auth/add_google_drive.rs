@@ -1,5 +1,6 @@
 use crate::{handlers::auth::login_with_google::AuthRequest, utils::app_errors::AppError};
 use axum::{Extension, extract::Query, response::Redirect};
+use chrono::Utc;
 use common::db_connect::init_db;
 use common::encrypt::encrypt;
 use common::export_envs::ENVS;
@@ -162,7 +163,10 @@ pub async fn drive_auth_callback(
         }
     };
 
-    let expires_in = json.get("expires_in");
+    let expires_in = match json.get("expires_in") {
+        None => Utc::now().timestamp() + 3599,
+        Some(time) => Utc::now().timestamp() + time.as_i64().unwrap()
+    };
     match json.get("refresh_token") {
         Some(token) => {
             let refresh_token = token.as_str();
@@ -220,7 +224,7 @@ pub async fn drive_auth_callback(
                     cloud.access_token = Set(encrypted_access_token);
                     cloud.refresh_token = Set(Some(encrypted_refresh_token));
                     cloud.email = Set(owned_email);
-                    cloud.expires_in = Set(expires_in.and_then(|v| v.as_i64()));
+                    cloud.expires_in = Set(Some(expires_in));
                     cloud.is_primary = Set(&email == &final_user_account.gmail);
                     cloud.provider = Set(entities::sea_orm_active_enums::Provider::Google);
                     cloud.user_id = Set(claims.id);
@@ -239,7 +243,7 @@ pub async fn drive_auth_callback(
                         email: Set(owned_email),
                         access_token: Set(encrypted_access_token),
                         refresh_token: Set(Some(encrypted_refresh_token)),
-                        expires_in: Set(expires_in.and_then(|v| v.as_i64())),
+                        expires_in: Set(Some(expires_in)),
                         is_primary: Set(&email == &final_user_account.gmail),
                         provider: Set(entities::sea_orm_active_enums::Provider::Google),
                         user_id: Set(claims.id),
@@ -301,7 +305,7 @@ pub async fn drive_auth_callback(
                     let owned_email = email.clone();
                     cloud.access_token = Set(encrypted_access_token);
                     cloud.email = Set(owned_email);
-                    cloud.expires_in = Set(expires_in.and_then(|v| v.as_i64()));
+                    cloud.expires_in = Set(Some(expires_in));
                     cloud.is_primary = Set(&email == &final_user_account.gmail);
                     cloud.provider = Set(entities::sea_orm_active_enums::Provider::Google);
                     cloud.user_id = Set(claims.id);
@@ -322,7 +326,7 @@ pub async fn drive_auth_callback(
                         email: Set(owned_email),
                         access_token: Set(encrypted_access_token),
                         refresh_token: Set(None),
-                        expires_in: Set(expires_in.and_then(|v| v.as_i64())),
+                        expires_in: Set(Some(expires_in)),
                         is_primary: Set(&email == &final_user_account.gmail),
                         provider: Set(entities::sea_orm_active_enums::Provider::Google),
                         user_id: Set(claims.id),

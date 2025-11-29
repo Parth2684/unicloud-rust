@@ -17,13 +17,12 @@ async fn main() {
         let result: Result<Option<String>, RedisError> = redis_conn
             .brpoplpush("refresh:queue", "refresh:queue", 1.0)
             .await;
-        
+
         let result = match result {
             Ok(some_str) => match some_str {
                 Some(str) => {
-                    println!("{str:?}");
                     str
-                },
+                }
                 None => continue,
             },
             Err(err) => {
@@ -31,7 +30,6 @@ async fn main() {
                 continue;
             }
         };
-        println!("31");
         let id = match Uuid::parse_str(&result) {
             Ok(uid) => uid,
             Err(err) => {

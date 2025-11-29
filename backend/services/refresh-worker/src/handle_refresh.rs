@@ -40,12 +40,11 @@ pub enum GoogleResult {
 
 pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
     let mut should_retry = false;
-    println!("{id}");
+
     let cloud_accs = CloudAccountEntity::find()
         .filter(CloudAccountColumn::UserId.eq(id))
         .all(db)
         .await;
-    println!("38");
     let cloud_accs = match cloud_accs {
         Ok(accs) => accs,
         Err(err) => {
@@ -54,26 +53,20 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
             return true;
         }
     };
-    println!("47");
     if cloud_accs.is_empty() {
-        println!("49");
         return false;
     }
     let time = Utc::now();
     let time = time.timestamp() - 300;
 
     for acc in cloud_accs {
-        println!("56");
         if acc.provider == Provider::Google && acc.expires_in < Some(time) && !acc.token_expired {
-            println!("58");
             let encrypt_refresh = match &acc.refresh_token {
                 Some(token) => {
-                    println!("{token:?}");
                     token
-                },
+                }
                 None => continue,
             };
-            println!("62 {encrypt_refresh:?}");
             let refresh_token = match decrypt(encrypt_refresh) {
                 Ok(token) => token,
                 Err(err) => {
@@ -81,7 +74,6 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                     continue;
                 }
             };
-            println!("70 {refresh_token:?}");
 
             let client = reqwest::Client::new();
             let res: Result<reqwest::Response, reqwest::Error> = client
@@ -94,15 +86,15 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                 ])
                 .send()
                 .await;
-
+            
             match res {
                 Ok(data) => {
-                    let json: Result<GoogleResult, reqwest::Error> =
-                        data.json().await;
+                    let json: Result<GoogleResult, reqwest::Error> = data.json().await;
                     let final_json = match json {
                         Ok(json) => match json {
                             GoogleResult::Ok(res) => res,
                             GoogleResult::Err(err) => {
+                                println!("{err:?}");
                                 if err.error == "invalid_grant"
                                     && err.error_description == "Token has been expired or revoked."
                                 {
@@ -134,7 +126,7 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                                 acc.access_token = Set(encrypted_token);
                                 acc.updated_at = Set(Some(current_time));
                                 acc.token_expired = Set(false);
-                                acc.expires_in = Set(Some(final_json.expires_in));
+                                acc.expires_in = Set(Some(final_json.expires_in + Utc::now().timestamp()));
                                 acc.refresh_token = Set(Some(refreshed));
                                 match acc.update(db).await {
                                     Ok(_) => (),
@@ -156,7 +148,7 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                             acc.access_token = Set(encrypted_token);
                             acc.updated_at = Set(Some(current_time));
                             acc.token_expired = Set(false);
-                            acc.expires_in = Set(Some(final_json.expires_in));
+                            acc.expires_in = Set(Some(final_json.expires_in + Utc::now().timestamp()));
                             match acc.update(db).await {
                                 Ok(_) => (),
                                 Err(err) => {
@@ -175,6 +167,5 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
             }
         }
     }
-    println!("reached end");
     should_retry
 }
