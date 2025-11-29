@@ -49,7 +49,6 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
         Ok(accs) => accs,
         Err(err) => {
             eprintln!("{err:?}");
-            should_retry = true;
             return true;
         }
     };
@@ -167,5 +166,6 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
             }
         }
     }
+    println!("reached end");
     should_retry
 }
