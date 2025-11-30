@@ -11,6 +11,6 @@ export type AuthState = {
 };
 
 export type AuthAction = {
-  setUser: (user: User) => void
-  logout: () => void
+  setUser: (user: User) => void;
+  logout: () => void;
 };

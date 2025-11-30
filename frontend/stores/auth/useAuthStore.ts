@@ -14,4 +14,3 @@ export const useAuthStore = createStore<AuthState & AuthAction>((set, get) => ({
     set({ authUser: null, isLoggedIn: false });
   },
 }));
-  

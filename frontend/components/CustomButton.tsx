@@ -1,4 +1,4 @@
-"use client"
+"use client";
 import { Button } from "./ui/button";
 import { cn } from "../lib/utils";
 import { ButtonHTMLAttributes, ComponentProps, FC, memo } from "react";
@@ -19,27 +19,18 @@ function CustomButton({
   ...props
 }: CustomButtonProps) {
   return (
-    <Button
-      className={cn("relative", buttonClassName)}
-      disabled={isLoading || disabled}
-      {...props}
-    >
+    <Button className={cn("relative", buttonClassName)} disabled={isLoading || disabled} {...props}>
       {isLoading && (
         <Spinner
-          className={cn(
-            "absolute h-4 w-4 animate-spin",
-            spinnerProps?.className
-          )}
+          className={cn("absolute h-4 w-4 animate-spin", spinnerProps?.className)}
           {...spinnerProps}
         />
       )}
 
       {/* hide content while loading */}
-      <span className={isLoading ? "opacity-0" : "opacity-100"}>
-        {children}
-      </span>
+      <span className={isLoading ? "opacity-0" : "opacity-100"}>{children}</span>
     </Button>
   );
 }
 
-export default memo(CustomButton)
+export default memo(CustomButton);
