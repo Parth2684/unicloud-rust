@@ -16,7 +16,7 @@ use sea_orm::{
 use serde::Deserialize;
 use uuid::Uuid;
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct GoogleResponse {
     pub access_token: String,
     pub expires_in: i64,
@@ -25,13 +25,13 @@ pub struct GoogleResponse {
     pub token_type: String,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct GoogleError {
     pub error: String,
     pub error_description: String,
 }
 
-#[derive(serde::Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(untagged)] // <-- IMPORTANT
 pub enum GoogleResult {
     Ok(GoogleResponse),
