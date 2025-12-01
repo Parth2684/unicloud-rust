@@ -2,7 +2,9 @@ use axum::{Router, middleware, routing::get};
 
 use crate::{
     handlers::auth::{
-        add_google_drive::{drive_auth_callback, drive_auth_redirect}, get_cookie::get_cookie, login_with_google::{google_auth_callback, google_auth_redirect}
+        add_google_drive::{drive_auth_callback, drive_auth_redirect},
+        get_cookie::get_cookie,
+        login_with_google::{google_auth_callback, google_auth_redirect},
     },
     utils::middleware::auth_middleware,
 };

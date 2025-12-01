@@ -8,7 +8,7 @@ export interface User {
 export type AuthState = {
   authUser: User | null;
   isLoggedIn: boolean;
-  token: string | null
+  token: string | null;
 };
 
 export type AuthAction = {

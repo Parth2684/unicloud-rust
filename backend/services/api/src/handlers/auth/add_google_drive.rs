@@ -165,7 +165,7 @@ pub async fn drive_auth_callback(
 
     let expires_in = match json.get("expires_in") {
         None => Utc::now().timestamp() + 3599,
-        Some(time) => Utc::now().timestamp() + time.as_i64().unwrap()
+        Some(time) => Utc::now().timestamp() + time.as_i64().unwrap(),
     };
     match json.get("refresh_token") {
         Some(token) => {

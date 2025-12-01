@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { AuthState, AuthAction } from "./types";
 import toast from "react-hot-toast";
-import { axiosInstance } from '../../utils/axiosInstance';
+import { axiosInstance } from "../../utils/axiosInstance";
 
 export const useAuthStore = create<AuthState & AuthAction>((set, get) => ({
   authUser: null,
@@ -18,15 +18,14 @@ export const useAuthStore = create<AuthState & AuthAction>((set, get) => ({
 
   setToken: async () => {
     try {
-      const res = await axiosInstance.get("/auth/token")
-      if (res.status!== 200) {
-        throw new Error("Auth Token not received")
+      const res = await axiosInstance.get("/auth/token");
+      if (res.status !== 200) {
+        throw new Error("Auth Token not received");
       }
-      set({token: res.data.auth_token})
+      set({ token: res.data.auth_token });
+    } catch (e) {
+      console.error(e);
+      toast.error(e as string);
     }
-    catch(e){
-      console.error(e)
-      toast.error(e as string)
-    }
-  }
+  },
 }));

@@ -20,9 +20,7 @@ async fn main() {
 
         let result = match result {
             Ok(some_str) => match some_str {
-                Some(str) => {
-                    str
-                }
+                Some(str) => str,
                 None => continue,
             },
             Err(err) => {

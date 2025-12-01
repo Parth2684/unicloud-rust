@@ -61,9 +61,7 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
     for acc in cloud_accs {
         if acc.provider == Provider::Google && acc.expires_in < Some(time) && !acc.token_expired {
             let encrypt_refresh = match &acc.refresh_token {
-                Some(token) => {
-                    token
-                }
+                Some(token) => token,
                 None => continue,
             };
             let refresh_token = match decrypt(encrypt_refresh) {
@@ -85,7 +83,7 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                 ])
                 .send()
                 .await;
-            
+
             match res {
                 Ok(data) => {
                     let json: Result<GoogleResult, reqwest::Error> = data.json().await;
@@ -125,7 +123,8 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                                 acc.access_token = Set(encrypted_token);
                                 acc.updated_at = Set(Some(current_time));
                                 acc.token_expired = Set(false);
-                                acc.expires_in = Set(Some(final_json.expires_in + Utc::now().timestamp()));
+                                acc.expires_in =
+                                    Set(Some(final_json.expires_in + Utc::now().timestamp()));
                                 acc.refresh_token = Set(Some(refreshed));
                                 match acc.update(db).await {
                                     Ok(_) => (),
@@ -147,7 +146,8 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                             acc.access_token = Set(encrypted_token);
                             acc.updated_at = Set(Some(current_time));
                             acc.token_expired = Set(false);
-                            acc.expires_in = Set(Some(final_json.expires_in + Utc::now().timestamp()));
+                            acc.expires_in =
+                                Set(Some(final_json.expires_in + Utc::now().timestamp()));
                             match acc.update(db).await {
                                 Ok(_) => (),
                                 Err(err) => {

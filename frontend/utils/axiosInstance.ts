@@ -1,5 +1,5 @@
 import axios from "axios";
-import { BACKEND_URL } from '../lib/export';
+import { BACKEND_URL } from "../lib/export";
 
 export const axiosInstance = axios.create({
   baseURL: BACKEND_URL,

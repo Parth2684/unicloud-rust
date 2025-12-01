@@ -64,7 +64,6 @@ pub async fn accept_connection(
         }
     };
 
-
     let url_opt = {
         match request_url.lock() {
             Ok(guard) => guard.clone(),

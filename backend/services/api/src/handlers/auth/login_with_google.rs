@@ -3,7 +3,7 @@ use axum::response::IntoResponse;
 use axum::{extract::Query, response::Redirect};
 use axum_extra::extract::cookie::Cookie;
 use axum_extra::extract::cookie::CookieJar;
-use chrono::{prelude::*};
+use chrono::prelude::*;
 use common::db_connect::init_db;
 use common::export_envs::ENVS;
 use common::jwt_config::{create_jwt, decode_jwt};
@@ -33,7 +33,8 @@ fn build_google_auth_url() -> Url {
             ("access_type", "offline"),
             ("prompt", "consent"),
         ],
-    ).unwrap_or_else(|err| {
+    )
+    .unwrap_or_else(|err| {
         eprintln!("Error building Google auth URL: {:?}", err);
         Url::parse(&format!("{}/auth/google", &ENVS.backend_url)).unwrap()
     })
@@ -47,7 +48,6 @@ pub async fn google_auth_redirect(jar: CookieJar) -> Redirect {
         _ => Redirect::to(build_google_auth_url().as_str()),
     }
 }
-
 
 #[derive(Serialize, Deserialize)]
 pub struct AuthRequest {
@@ -299,7 +299,7 @@ pub async fn google_auth_callback(
         .same_site(axum_extra::extract::cookie::SameSite::Lax)
         .secure(secure)
         .expires(expiry_time);
-    
+
     if &ENVS.environment == "production" {
         if let Some(x) = &ENVS.domain {
             cookie = cookie.domain(x);

@@ -2,19 +2,19 @@
 
 import { ReactNode, useEffect, useRef } from "react";
 import { getSocket } from "../lib/ws-client";
-import { useAuthStore } from '../stores/auth/useAuthStore';
+import { useAuthStore } from "../stores/auth/useAuthStore";
 
 export default function WSProvider({ children }: { children: ReactNode }) {
   const wsRef = useRef<WebSocket | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const {setToken, token} = useAuthStore()
-  
+  const { setToken, token } = useAuthStore();
+
   useEffect(() => {
-    setToken()
-  },[])
+    setToken();
+  }, []);
   useEffect(() => {
-    if(!token) return
-    const ws = getSocket(token)
+    if (!token) return;
+    const ws = getSocket(token);
     if (!ws) return;
     wsRef.current = ws;
 
