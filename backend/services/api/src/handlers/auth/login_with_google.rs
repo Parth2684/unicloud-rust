@@ -3,10 +3,10 @@ use axum::response::IntoResponse;
 use axum::{extract::Query, response::Redirect};
 use axum_extra::extract::cookie::Cookie;
 use axum_extra::extract::cookie::CookieJar;
-use chrono::prelude::*;
+use chrono::{prelude::*};
 use common::db_connect::init_db;
 use common::export_envs::ENVS;
-use common::jwt_config::create_jwt;
+use common::jwt_config::{create_jwt, decode_jwt};
 use entities::quota::{Column as QuotaColumn, Entity as QuotaEntity};
 use entities::sea_orm_active_enums::QuotaType;
 use entities::users::{Column as UserColumn, Entity as UserEntity};
@@ -15,14 +15,15 @@ use reqwest::Client;
 use sea_orm::ActiveValue::Set;
 use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter};
 use serde::{Deserialize, Serialize};
+use time::{Duration, OffsetDateTime};
 use url::Url;
 use uuid::Uuid;
 
-pub async fn google_auth_redirect() -> Redirect {
+fn build_google_auth_url() -> Url {
     let client_id = &ENVS.google_client_id;
     let redirect_url = &ENVS.google_client_redirect_url;
 
-    let auth_url = Url::parse_with_params(
+    Url::parse_with_params(
         "https://accounts.google.com/o/oauth2/v2/auth",
         &[
             ("client_id", client_id.as_str()),
@@ -32,15 +33,21 @@ pub async fn google_auth_redirect() -> Redirect {
             ("access_type", "offline"),
             ("prompt", "consent"),
         ],
-    );
-    match auth_url {
-        Ok(url) => Redirect::to(url.as_str()),
-        Err(err) => {
-            eprintln!("{err:?}");
-            Redirect::to(&format!("{}/auth/google", &ENVS.backend_url.as_str()))
+    ).unwrap_or_else(|err| {
+        eprintln!("Error building Google auth URL: {:?}", err);
+        Url::parse(&format!("{}/auth/google", &ENVS.backend_url)).unwrap()
+    })
+}
+
+pub async fn google_auth_redirect(jar: CookieJar) -> Redirect {
+    match jar.get("auth_token") {
+        Some(cookie) if decode_jwt(cookie.value()).is_ok() => {
+            Redirect::to(&format!("{}/home", &ENVS.frontend_url))
         }
+        _ => Redirect::to(build_google_auth_url().as_str()),
     }
 }
+
 
 #[derive(Serialize, Deserialize)]
 pub struct AuthRequest {
@@ -285,13 +292,14 @@ pub async fn google_auth_callback(
     };
 
     let secure = ENVS.environment != "DEVELOPMENT";
-
+    let expiry_time = OffsetDateTime::now_utc() + Duration::days(7);
     let mut cookie = Cookie::build(("auth_token", token))
         .path("/")
         .http_only(true)
         .same_site(axum_extra::extract::cookie::SameSite::Lax)
-        .secure(secure);
-
+        .secure(secure)
+        .expires(expiry_time);
+    
     if &ENVS.environment == "production" {
         if let Some(x) = &ENVS.domain {
             cookie = cookie.domain(x);

@@ -166,6 +166,5 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
             }
         }
     }
-    println!("reached end");
     should_retry
 }

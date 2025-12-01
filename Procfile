@@ -1,4 +1,4 @@
-api: cd backend && cargo watch -p api
-ws: cd backend && cargo watch -p ws
-refresh-worker: cd backend && cargo watch -p refresh-worker
+api: cd backend && cargo run -p api
+ws: cd backend && cargo run -p ws
+refresh-worker: cd backend && cargo run -p refresh-worker
 frontend: cd frontend && bun dev

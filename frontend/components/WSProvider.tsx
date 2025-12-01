@@ -2,13 +2,19 @@
 
 import { ReactNode, useEffect, useRef } from "react";
 import { getSocket } from "../lib/ws-client";
+import { useAuthStore } from '../stores/auth/useAuthStore';
 
 export default function WSProvider({ children }: { children: ReactNode }) {
   const wsRef = useRef<WebSocket | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
+  const {setToken, token} = useAuthStore()
+  
   useEffect(() => {
-    const ws = getSocket();
+    setToken()
+  },[])
+  useEffect(() => {
+    if(!token) return
+    const ws = getSocket(token)
     if (!ws) return;
     wsRef.current = ws;
 
@@ -57,7 +63,7 @@ export default function WSProvider({ children }: { children: ReactNode }) {
         intervalRef.current = null;
       }
     };
-  }, []);
+  }, [token]);
 
   return children;
 }
