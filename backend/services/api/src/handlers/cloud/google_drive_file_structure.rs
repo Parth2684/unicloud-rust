@@ -14,7 +14,7 @@ use axum::{
 use common::{db_connect::init_db, encrypt::decrypt, jwt_config::Claims};
 use entities::{
     cloud_account::{
-        ActiveModel as CloudAccountActive, Column as CloudAccountColumn,
+        Column as CloudAccountColumn,
         Entity as CloudAccountEntity,
     },
     sea_orm_active_enums::Provider,
@@ -219,17 +219,14 @@ pub async fn google_drive_file_structure(
                             let _ = trs_clone.send(result);
                         });
                     }
+                    
+                    drop(trs);
 
-                    let google_drives = match rec.recv() {
-                        Ok(drive) => drive,
-                        Err(err) => {
-                            eprintln!("error in receiving multi-threaded tree building: {err:?}");
-                            return Err(AppError::Internal(Some(String::from(
-                                "Error during building trees",
-                            ))));
-                        }
-                    };
-
+                    let mut google_drives = Vec::new();
+                    while let Ok(drive) = rec.recv() {
+                        google_drives.push(drive);
+                    }
+                    
                     return Ok((
                         StatusCode::OK,
                         Json(json!({
