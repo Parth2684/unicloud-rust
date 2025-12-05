@@ -14,6 +14,7 @@ export function getSocket(token: string | null) {
   }
 
   const url = new URL(WEBSOCKET_URL);
+  url.pathname = "";
   url.searchParams.append("token", token);
 
   socket = new WebSocket(url.toString());
