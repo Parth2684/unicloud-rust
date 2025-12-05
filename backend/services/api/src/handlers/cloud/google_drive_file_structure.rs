@@ -13,10 +13,7 @@ use axum::{
 };
 use common::{db_connect::init_db, encrypt::decrypt, jwt_config::Claims};
 use entities::{
-    cloud_account::{
-        Column as CloudAccountColumn,
-        Entity as CloudAccountEntity,
-    },
+    cloud_account::{Column as CloudAccountColumn, Entity as CloudAccountEntity},
     sea_orm_active_enums::Provider,
 };
 use futures::future::join_all;
@@ -96,7 +93,7 @@ async fn fetch_all_files(access_token: &str) -> reqwest::Result<Vec<DriveFile>> 
 }
 
 fn build_tree(files: &Vec<DriveFile>) -> HashMap<String, Node> {
-    let mut map: HashMap<String, Node> = files
+    let mut nodes: HashMap<String, Node> = files
         .iter()
         .map(|file| {
             (
@@ -105,26 +102,27 @@ fn build_tree(files: &Vec<DriveFile>) -> HashMap<String, Node> {
                     id: file.id.clone(),
                     name: file.name.clone(),
                     mimeType: file.mimeType.clone(),
-                    children: vec![],
+                    children: Vec::new(),
                 },
             )
         })
         .collect();
 
-    let ids: Vec<String> = map.keys().cloned().collect();
-    for id in ids {
-        if let Some(file) = files.iter().find(|x| x.id == id) {
-            if let Some(parents) = &file.parents {
-                for parent in parents {
-                    if map.contains_key(parent) {
-                        let child = map.remove(&id).unwrap();
-                        map.get_mut(parent).unwrap().children.push(child);
+    for file in files {
+        if let Some(parents) = &file.parents {
+            for parent_id in parents {
+                if nodes.contains_key(parent_id) {
+                    if let Some(child_node) = nodes.remove(&file.id) {
+                        if let Some(parent_node) = nodes.get_mut(parent_id) {
+                            parent_node.children.push(child_node);
+                        }
                     }
                 }
             }
         }
     }
-    map
+
+    nodes
 }
 
 pub async fn google_drive_file_structure(
@@ -219,14 +217,14 @@ pub async fn google_drive_file_structure(
                             let _ = trs_clone.send(result);
                         });
                     }
-                    
+
                     drop(trs);
 
                     let mut google_drives = Vec::new();
                     while let Ok(drive) = rec.recv() {
                         google_drives.push(drive);
                     }
-                    
+
                     return Ok((
                         StatusCode::OK,
                         Json(json!({
