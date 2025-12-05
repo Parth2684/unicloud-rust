@@ -1,4 +1,4 @@
-use crate::routers::auth_router::auth_routes;
+use crate::routers::{auth_router::auth_routes, cloud_router::cloud_router};
 use axum::{Router, http::HeaderValue, routing::get};
 use common::export_envs::ENVS;
 use http::Method;
@@ -30,6 +30,7 @@ async fn main() {
     let app = Router::<()>::new()
         .route("/", get(|| async { "Hello World" }))
         .nest("/api/v1/auth", auth_routes())
+        .nest("/api/v1/cloud", cloud_router())
         .layer(cors);
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:3000").await.unwrap();
