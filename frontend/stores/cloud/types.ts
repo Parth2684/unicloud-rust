@@ -1,23 +1,20 @@
-
 export interface Node {
   id: string;
   name: string;
   mimeType: string;
-  children: Node[]
+  children: Node[];
 }
 
 export interface GoogleDrive {
   drive_name: string;
-  files: Record<string, Node>
+  files: Node[];
 }
-
-
 
 export type CloudState = {
-  googleDrives: GoogleDrive[] | null
-  loading: boolean
-}
+  googleDrives: GoogleDrive[] | null;
+  loading: boolean;
+};
 
 export type CloudAction = {
   setGoogleDrives: () => Promise<void>;
-}
+};

@@ -1,7 +1,10 @@
 use std::{
+    cell::RefCell,
     collections::HashMap,
+    rc::Rc,
+    slice::from_mut,
     sync::{Arc, mpsc},
-    thread,
+    thread, vec,
 };
 
 use axum::{
@@ -29,7 +32,7 @@ struct DriveFile {
     name: String,
     mimeType: String,
     #[serde(default)]
-    parents: Option<Vec<String>>,
+    parents: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -39,7 +42,7 @@ struct FileListResponse {
     nextPageToken: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Node {
     pub id: String,
     pub name: String,
@@ -57,7 +60,7 @@ struct FileStructureName {
 #[derive(Serialize)]
 struct Drive {
     drive_name: String,
-    files: HashMap<String, Node>,
+    files: Vec<Node>,
 }
 
 async fn fetch_all_files(access_token: &str) -> reqwest::Result<Vec<DriveFile>> {
@@ -66,7 +69,13 @@ async fn fetch_all_files(access_token: &str) -> reqwest::Result<Vec<DriveFile>> 
     let mut page_token: Option<String> = None;
     loop {
         let mut url = String::from(
-            "https://www.googleapis.com/drive/v3/files?fields=files(id,name,mimeType,parents),nextPageToken",
+            "https://www.googleapis.com/drive/v3/files\
+                    ?spaces=drive\
+                    &corpora=user\
+                    &includeItemsFromAllDrives=true\
+                    &supportsAllDrives=true\
+                    &q=trashed=false\
+                    &fields=files(id,name,mimeType,parents),nextPageToken",
         );
         if let Some(token) = page_token.clone() {
             url.push_str(&format!("&pageToken={}", token));
@@ -87,40 +96,78 @@ async fn fetch_all_files(access_token: &str) -> reqwest::Result<Vec<DriveFile>> 
             None => break,
         }
     }
+    dbg!(&all_files);
     Ok(all_files)
 }
 
-fn build_tree(files: &Vec<DriveFile>) -> HashMap<String, Node> {
-    let mut nodes: HashMap<String, Node> = files
-        .iter()
-        .map(|file| {
-            (
-                file.id.clone(),
-                Node {
-                    id: file.id.clone(),
-                    name: file.name.clone(),
-                    mimeType: file.mimeType.clone(),
-                    children: Vec::new(),
-                },
-            )
-        })
-        .collect();
+#[derive(Clone)]
+struct Map {
+    parents: Vec<String>,
+    file: Node,
+}
 
-    for file in files {
-        if let Some(parents) = &file.parents {
-            for parent_id in parents {
-                if nodes.contains_key(parent_id) {
-                    if let Some(child_node) = nodes.remove(&file.id) {
-                        if let Some(parent_node) = nodes.get_mut(parent_id) {
-                            parent_node.children.push(child_node);
-                        }
+fn find_node_mut<'a>(nodes: &'a mut [Node], target_id: &str) -> Option<&'a mut Node> {
+    for node in nodes {
+        if node.id == target_id {
+            return Some(node);
+        }
+        if let Some(found) = find_node_mut(&mut node.children, target_id) {
+            return Some(found);
+        }
+    }
+    None
+}
+
+fn build_tree(files: &mut Vec<DriveFile>) -> Vec<Node> {
+    let maps: Rc<RefCell<Vec<Map>>> = Rc::new(RefCell::new(Vec::new()));
+    let roots: Rc<RefCell<Vec<Node>>> = Rc::new(RefCell::new(Vec::new()));
+
+    for f in files {
+        let get_roots = Rc::clone(&roots);
+        if f.parents.is_empty() {
+            get_roots.borrow_mut().push(Node {
+                id: f.id.clone(),
+                name: f.name.clone(),
+                mimeType: f.mimeType.clone(),
+                children: vec![],
+            });
+        } else {
+            maps.borrow_mut().push(Map {
+                parents: f.parents.clone(),
+                file: Node {
+                    id: f.id.clone(),
+                    name: f.name.clone(),
+                    mimeType: f.mimeType.clone(),
+                    children: vec![],
+                },
+            });
+        }
+    }
+
+    loop {
+        let fill_roots = Rc::clone(&roots);
+        let loop_maps = Rc::clone(&maps);
+        let mut pushed_ids: Vec<String> =
+            fill_roots.borrow().iter().map(|f| f.id.clone()).collect();
+
+        for f in loop_maps.borrow_mut().iter_mut() {
+            if pushed_ids.contains(&f.file.id) {
+                continue;
+            }
+            for parent in f.parents.clone() {
+                let mut to_find = fill_roots.borrow_mut();
+                let parent_node = find_node_mut(&mut to_find, &parent);
+                match parent_node {
+                    None => (),
+                    Some(pn) => {
+                        pn.children.push(f.file.clone());
+                        pushed_ids.push(f.file.id.clone());
                     }
                 }
             }
         }
     }
-
-    nodes
+    roots.into_inner()
 }
 
 pub async fn google_drive_file_structure(
