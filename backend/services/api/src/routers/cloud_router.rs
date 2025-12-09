@@ -1,12 +1,13 @@
 use axum::{Router, middleware, routing::get};
 
-use crate::{handlers::cloud::google_drive_file_structure::google_drive_file_structure, utils::middleware::auth_middleware};
+use crate::{handlers::cloud::{get_cloud_accounts::get_cloud_accounts, google_get_folders::google_get_root}, utils::middleware::auth_middleware};
 
 
 
 
 pub fn cloud_router() -> Router {
     Router::new()
-        .route("/get-google-drives", get(google_drive_file_structure))
+        .route("/get-cloud-accounts", get(get_cloud_accounts))
+        .route("/get-google-root", get(google_get_root))
         .layer(middleware::from_fn(auth_middleware))
 } 

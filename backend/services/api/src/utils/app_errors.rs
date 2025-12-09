@@ -9,6 +9,7 @@ pub enum AppError {
     NotFound(Option<String>),
     Internal(Option<String>),
     Forbidden(Option<String>),
+    UnprocessableEntry(Option<String>),
 }
 
 impl IntoResponse for AppError {
@@ -48,6 +49,16 @@ impl IntoResponse for AppError {
                 let message = msg.unwrap_or_else(|| String::from("Forbidden"));
                 (
                     StatusCode::FORBIDDEN,
+                    Json(json!({
+                        "message": message
+                    })),
+                )
+                    .into_response()
+            }
+            AppError::UnprocessableEntry(msg) => {
+                let message = msg.unwrap_or_else(|| String::from("Unprocessable Entry"));
+                (
+                    StatusCode::UNPROCESSABLE_ENTITY,
                     Json(json!({
                         "message": message
                     })),
