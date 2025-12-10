@@ -152,6 +152,14 @@ pub async fn drive_auth_callback(
         }
     };
 
+    let image: Option<String> = match openid_res.get("picture") {
+        Some(link) => match link.as_str() {
+            Some(str) => Some(str.to_owned()),
+            None => None,
+        },
+        None => None,
+    };
+
     let encrypted_access_token = encrypt(&access_token);
     let encrypted_access_token = match encrypted_access_token {
         Ok(token) => token,
@@ -228,6 +236,7 @@ pub async fn drive_auth_callback(
                     cloud.is_primary = Set(&email == &final_user_account.gmail);
                     cloud.provider = Set(entities::sea_orm_active_enums::Provider::Google);
                     cloud.user_id = Set(claims.id);
+                    cloud.image = Set(image);
                     let account: CloudAccountModel = match cloud.update(db).await {
                         Ok(acc) => acc,
                         Err(err) => return Err(AppError::Internal(Some(err.to_string()))),
@@ -248,6 +257,7 @@ pub async fn drive_auth_callback(
                         provider: Set(entities::sea_orm_active_enums::Provider::Google),
                         user_id: Set(claims.id),
                         sub: Set(Some(owned_sub)),
+                        image: Set(image),
                         ..Default::default()
                     };
                     let account: CloudAccountModel = match insert_cloud.insert(db).await {
@@ -309,6 +319,7 @@ pub async fn drive_auth_callback(
                     cloud.is_primary = Set(&email == &final_user_account.gmail);
                     cloud.provider = Set(entities::sea_orm_active_enums::Provider::Google);
                     cloud.user_id = Set(claims.id);
+                    cloud.image = Set(image);
                     match cloud.update(db).await {
                         Ok(_) => Ok(Redirect::to(&format!(
                             "{}/home",
@@ -331,6 +342,7 @@ pub async fn drive_auth_callback(
                         provider: Set(entities::sea_orm_active_enums::Provider::Google),
                         user_id: Set(claims.id),
                         sub: Set(Some(owned_sub)),
+                        image: Set(image),
                         ..Default::default()
                     };
                     match insert_cloud.insert(db).await {

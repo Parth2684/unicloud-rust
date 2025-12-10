@@ -25,6 +25,7 @@ pub struct Model {
     pub sub: Option<String>,
     pub token_expired: bool,
     pub updated_at: Option<DateTime>,
+    pub image: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

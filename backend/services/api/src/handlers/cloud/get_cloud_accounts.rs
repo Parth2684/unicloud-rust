@@ -8,16 +8,20 @@ use entities::{
     cloud_account::{Column as CloudAccountColumn, Entity as CloudAccountEntity},
     sea_orm_active_enums::Provider,
 };
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter};
+use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect};
 use serde_json::json;
 
 use crate::utils::app_errors::AppError;
 
-pub async fn get_cloud_accounts(Extension(claims): Extension<Claims>) -> Result<Response, AppError> {
+pub async fn get_cloud_accounts(
+    Extension(claims): Extension<Claims>,
+) -> Result<Response, AppError> {
     let db = init_db().await;
     let cloud_accounts = CloudAccountEntity::find()
         .filter(CloudAccountColumn::UserId.eq(claims.id))
         .filter(CloudAccountColumn::Provider.eq(Provider::Google))
+        .select_only()
+        .columns([CloudAccountColumn::Id, CloudAccountColumn::Email, CloudAccountColumn::Provider, CloudAccountColumn::TokenExpired, CloudAccountColumn::Image])
         .all(db)
         .await;
 
@@ -48,5 +52,5 @@ pub async fn get_cloud_accounts(Extension(claims): Extension<Claims>) -> Result<
             "google_drive_accounts": google_drive_accounts
         })),
     )
-    .into_response())
+        .into_response())
 }

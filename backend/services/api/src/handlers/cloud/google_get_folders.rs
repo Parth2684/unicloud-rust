@@ -1,22 +1,21 @@
-use axum::{
-    Json,
-    extract::Path,
-    http::StatusCode,
-    response::{IntoResponse},
-};
-use common::{db_connect::init_db, encrypt::decrypt};
+use axum::{Extension, Json, extract::Path, http::StatusCode, response::IntoResponse};
+use common::{db_connect::init_db, encrypt::decrypt, jwt_config::Claims};
 use entities::{
     cloud_account::{self, Column as CloudAccountColumn, Entity as CloudAccountEntity},
     sea_orm_active_enums::Provider,
 };
 use reqwest::Client;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
+use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
 
 use crate::utils::{app_errors::AppError, google_search_folder::google_search_folder};
 
-pub async fn google_get_root(Path(drive_id): Path<String>) -> Result<impl IntoResponse, AppError> {
+pub async fn google_get_root(
+    Path(drive_id): Path<String>,
+    Extension(claims): Extension<Claims>,
+) -> Result<impl IntoResponse, AppError> {
     let db = init_db().await;
     let drive_id = match Uuid::parse_str(&drive_id) {
         Ok(id) => id,
@@ -30,6 +29,7 @@ pub async fn google_get_root(Path(drive_id): Path<String>) -> Result<impl IntoRe
     let google_account = CloudAccountEntity::find()
         .filter(CloudAccountColumn::Id.eq(drive_id))
         .filter(CloudAccountColumn::Provider.eq(Provider::Google))
+        .filter(CloudAccountColumn::UserId.eq(claims.id))
         .one(db)
         .await;
 
@@ -104,6 +104,67 @@ pub async fn google_get_root(Path(drive_id): Path<String>) -> Result<impl IntoRe
                     }
                 }
             },
+        },
+    }
+}
+
+#[derive(Deserialize)]
+pub struct GoogleParams {
+    drive_id: String,
+    folder_id: String,
+}
+pub async fn google_get_folders(
+    Path(params): Path<GoogleParams>,
+    Extension(claims): Extension<Claims>,
+) -> Result<impl IntoResponse, AppError> {
+    let db = init_db().await;
+    let google_account = CloudAccountEntity::find()
+        .filter(CloudAccountColumn::Id.eq(params.drive_id))
+        .filter(CloudAccountColumn::Provider.eq(Provider::Google))
+        .filter(CloudAccountColumn::UserId.eq(claims.id))
+        .one(db)
+        .await;
+
+    match google_account {
+        Err(err) => {
+            eprintln!("{err:?}");
+            return Err(AppError::Internal(Some(
+                "Error connecting to database".to_string(),
+            )));
+        }
+        Ok(some_acc) => match some_acc {
+            Some(acc) => match decrypt(&acc.access_token) {
+                Ok(token) => {
+                    let res = google_search_folder(&params.folder_id, &token).await;
+                    match res {
+                        Err(err) => {
+                            eprintln!("{err:?}");
+                            return Err(AppError::Internal(Some(
+                                "error fetching files under this folder".to_string(),
+                            )));
+                        }
+                        Ok(files) => Ok((
+                            StatusCode::OK,
+                            Json(json!({
+                                "files": files
+                            })),
+                        )
+                            .into_response()),
+                    }
+                }
+                Err(err) => {
+                    eprintln!("{err:?}");
+                    let mut acc: cloud_account::ActiveModel = acc.into();
+                    acc.token_expired = Set(true);
+                    acc.update(db).await.ok();
+                    return Err(AppError::Unauthorised(Some(String::from(
+                        "Error decrypting token please add the account again",
+                    ))));
+                }
+            },
+            None => Err(AppError::NotFound(Some(String::from(
+                "Could not find such account",
+            )))),
         },
     }
 }
