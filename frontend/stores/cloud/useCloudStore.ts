@@ -18,8 +18,8 @@ export const useCloudStore = create<CloudState & CloudActions>((set, get) => ({
         successCloudAccounts: res.data.google_drive_accounts,
         errorCloudAccounts: res.data.need_refresh,
       });
-      console.log("success clouds"+ get().successCloudAccounts)
-      console.log("error clouds"+ get().errorCloudAccounts)      
+      console.log("success clouds" + get().successCloudAccounts);
+      console.log("error clouds" + get().errorCloudAccounts);
     } catch (error) {
       console.error(error);
       if (error instanceof AxiosError && error.response?.data.message) {
@@ -36,10 +36,10 @@ export const useCloudStore = create<CloudState & CloudActions>((set, get) => ({
     set({ loading: true });
     try {
       if (!folder_id) {
-        const res = await axiosInstance.get(`/get-google-root/${drive_id}`);
+        const res = await axiosInstance.get(`/cloud/google/root/${drive_id}`);
         set({ drive: res.data.files });
       } else {
-        const res = await axiosInstance.get(`/get-google-folder/${drive_id}/${folder_id}`);
+        const res = await axiosInstance.get(`/cloud/google/folder/${drive_id}/${folder_id}`);
         set({ drive: res.data.files });
       }
     } catch (error) {

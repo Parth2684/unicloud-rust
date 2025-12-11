@@ -21,7 +21,7 @@ export interface ErrorCloudAccount {
   image?: string
 } 
 
-export interface SuccessCloudAccount {
+  export interface SuccessCloudAccount {
   info: ErrorCloudAccount,
   storageQuota: {
     limit?: string
@@ -42,7 +42,7 @@ export type CloudState = {
 
 export type CloudActions = {
   setClouds: () => Promise<void>
-  setCurrentGoogleFolder: (drive_id: string, folder_id?: string) => Promise<void>
+  setCurrentGoogleFolder: (drive_id: string, folder_id?: string | null) => Promise<void>
 }
 
 

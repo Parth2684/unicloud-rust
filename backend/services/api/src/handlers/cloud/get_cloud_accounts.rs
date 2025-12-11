@@ -45,6 +45,7 @@ struct ReturnErrorCloud {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ReturnSuccessCloud {
     storage_quota: StorageQuota,
     info: ReturnErrorCloud,
@@ -57,15 +58,6 @@ pub async fn get_cloud_accounts(
     let google_accounts = CloudAccountEntity::find()
         .filter(CloudAccountColumn::UserId.eq(claims.id))
         .filter(CloudAccountColumn::Provider.eq(Provider::Google))
-        .select_only()
-        .columns([
-            CloudAccountColumn::Id,
-            CloudAccountColumn::Email,
-            CloudAccountColumn::Provider,
-            CloudAccountColumn::TokenExpired,
-            CloudAccountColumn::Image,
-            CloudAccountColumn::AccessToken,
-        ])
         .all(db)
         .await;
 

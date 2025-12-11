@@ -59,7 +59,7 @@ pub async fn google_get_root(
                 Ok(token) => {
                     let client = Client::new();
                     match client
-                        .get("https://www.googleapis.com/drive/v3/about?fields=rootFolderId")
+                        .get("https://www.googleapis.com/drive/v3/files/root?fields=id")
                         .bearer_auth(&token)
                         .send()
                         .await
@@ -72,7 +72,8 @@ pub async fn google_get_root(
                         }
                         Ok(res) => {
                             let res = res.json::<serde_json::Value>().await.unwrap();
-                            match res.get("rootFolderId") {
+                            println!("{res:?}");
+                            match res.get("id") {
                                 None => {
                                     return Err(AppError::NotFound(Some(String::from(
                                         "Couldn't find the drive root",
@@ -92,7 +93,7 @@ pub async fn google_get_root(
                                             return Ok((
                                                 StatusCode::OK,
                                                 Json(json!({
-                                                    "files": files
+                                                        "files": files
                                                 })),
                                             )
                                                 .into_response());
@@ -118,8 +119,17 @@ pub async fn google_get_folders(
     Extension(claims): Extension<Claims>,
 ) -> Result<impl IntoResponse, AppError> {
     let db = init_db().await;
+    let drive_id = match Uuid::parse_str(&params.drive_id) {
+        Ok(id) => id,
+        Err(err) => {
+            eprintln!("{err}");
+            return Err(AppError::UnprocessableEntry(Some(String::from(
+                "Error during parsing cloud id",
+            ))));
+        }
+    };
     let google_account = CloudAccountEntity::find()
-        .filter(CloudAccountColumn::Id.eq(params.drive_id))
+        .filter(CloudAccountColumn::Id.eq(drive_id))
         .filter(CloudAccountColumn::Provider.eq(Provider::Google))
         .filter(CloudAccountColumn::UserId.eq(claims.id))
         .one(db)
