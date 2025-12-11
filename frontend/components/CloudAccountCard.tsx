@@ -1,0 +1,27 @@
+import { ChevronRight, Cloud } from 'lucide-react';
+import { SuccessCloudAccount } from "../stores/cloud/types";
+import { StorageBar } from './StorageBar';
+
+export const CloudAccountCard: React.FC<{
+  account: SuccessCloudAccount;
+  onClick: () => void;
+}> = ({ account, onClick }) => {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full p-4 bg-white border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all text-left"
+    >
+      <div className="flex items-start gap-3">
+        <div className="p-2 bg-blue-50 rounded-lg">
+          {account.info.image ? <img src={account.info.image} className="w-6 h-6" /> : <Cloud className="w-6 h-6 text-blue-600" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-gray-900 truncate">{account.info.email}</h3>
+          <p className="text-sm text-gray-500 mb-3">Google Drive</p>
+          <StorageBar account={account} />
+        </div>
+        <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+      </div>
+    </button>
+  );
+};

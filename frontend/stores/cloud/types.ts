@@ -24,10 +24,10 @@ export interface ErrorCloudAccount {
 export interface SuccessCloudAccount {
   info: ErrorCloudAccount,
   storageQuota: {
-    limit?: number
-    usageInDrive: number
-    usageInDriveTrash: number
-    usage: number
+    limit?: string
+    usageInDrive: string
+    usageInDriveTrash: string
+    usage: string
   }
 }
 

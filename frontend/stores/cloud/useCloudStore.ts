@@ -18,6 +18,8 @@ export const useCloudStore = create<CloudState & CloudActions>((set, get) => ({
         successCloudAccounts: res.data.google_drive_accounts,
         errorCloudAccounts: res.data.need_refresh,
       });
+      console.log("success clouds"+ get().successCloudAccounts)
+      console.log("error clouds"+ get().errorCloudAccounts)      
     } catch (error) {
       console.error(error);
       if (error instanceof AxiosError && error.response?.data.message) {
