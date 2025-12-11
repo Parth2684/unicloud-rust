@@ -1,5 +1,4 @@
 import { BACKEND_URL } from "@/lib/export";
-import GoogleDrive from '../../../components/GoogleDrives';
 
 export default function Home() {
   return (
@@ -10,7 +9,6 @@ export default function Home() {
       >
         Add Google Drive
       </a>
-      <GoogleDrive />
     </div>
   );
 }
