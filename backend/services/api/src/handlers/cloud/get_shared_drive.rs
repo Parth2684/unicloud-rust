@@ -65,7 +65,7 @@ pub async fn get_shared_drives (Extension(claims): Extension<Claims>, Path(drive
                                 }
                                 Err(err) => {
                                     eprintln!("{err:?}");
-                                    Err(AppError::Internal(Some(String::from("Error parsing response form the google api"))))
+                                    Err(AppError::Internal(Some(String::from("Error getting response form the google api"))))
                                 }
                             }
                         }
@@ -79,5 +79,3 @@ pub async fn get_shared_drives (Extension(claims): Extension<Claims>, Path(drive
         }
     }
 }
-
-// pub async fn get_shared_files()

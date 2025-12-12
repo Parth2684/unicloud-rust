@@ -2,8 +2,7 @@ use axum::{Router, middleware, routing::get};
 
 use crate::{
     handlers::cloud::{
-        get_cloud_accounts::get_cloud_accounts,
-        google_get_folders::{google_get_folders, google_get_root},
+        get_cloud_accounts::get_cloud_accounts, get_shared_drive::get_shared_drives, google_get_folders::{google_get_folders, google_get_root}
     },
     utils::middleware::auth_middleware,
 };
@@ -16,5 +15,6 @@ pub fn cloud_router() -> Router {
             "/google/folder/{drive_id}/{folder_id}",
             get(google_get_folders),
         )
+        .route("/google/shared_drive", get(get_shared_drives))
         .layer(middleware::from_fn(auth_middleware))
 }
