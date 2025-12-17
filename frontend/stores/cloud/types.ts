@@ -32,8 +32,8 @@ export interface SuccessCloudAccount {
 }
 
 export interface SharedDrive {
-  id: string,
-  name: string
+  id: string;
+  name: string;
 }
 
 export type CloudState = {
@@ -41,11 +41,11 @@ export type CloudState = {
   successCloudAccounts: SuccessCloudAccount[] | null;
   errorCloudAccounts: ErrorCloudAccount[] | null;
   drive: DriveFile[] | null;
-  sharedDrives: SharedDrive[] | null
+  sharedDrives: SharedDrive[] | null;
 };
 
 export type CloudActions = {
   setClouds: () => Promise<void>;
   setCurrentGoogleFolder: (drive_id: string, folder_id?: string | null) => Promise<void>;
-  setSharedDrives: (drive_id: string) => Promise<void>
+  setSharedDrives: (drive_id: string) => Promise<void>;
 };

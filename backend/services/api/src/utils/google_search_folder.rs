@@ -43,6 +43,6 @@ pub async fn google_search_folder(
             println!("{data:?}");
             let get_data = data.json::<DriveListResponse>().await?;
             Ok(get_data.files)
-        },
+        }
     }
 }

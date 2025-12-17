@@ -1,13 +1,14 @@
-import { SuccessCloudAccount } from '../stores/cloud/types';
-import { formatBytes, getUsagePercentage } from '../utils/format';
-
-
+import { SuccessCloudAccount } from "../stores/cloud/types";
+import { formatBytes, getUsagePercentage } from "../utils/format";
 
 export const StorageBar: React.FC<{ account: SuccessCloudAccount }> = ({ account }) => {
   const { storageQuota } = account;
-  const percentage = getUsagePercentage(storageQuota.usage, storageQuota.limit || storageQuota.usage);
+  const percentage = getUsagePercentage(
+    storageQuota.usage,
+    storageQuota.limit || storageQuota.usage,
+  );
   const usedGB = formatBytes(storageQuota.usage);
-  const totalGB = storageQuota.limit ? formatBytes(storageQuota.limit) : 'Unlimited';
+  const totalGB = storageQuota.limit ? formatBytes(storageQuota.limit) : "Unlimited";
 
   return (
     <div className="w-full space-y-2">
@@ -18,7 +19,7 @@ export const StorageBar: React.FC<{ account: SuccessCloudAccount }> = ({ account
       <div className="w-full bg-gray-200 rounded-full h-2">
         <div
           className={`h-2 rounded-full transition-all ${
-            percentage > 90 ? 'bg-red-500' : percentage > 70 ? 'bg-yellow-500' : 'bg-blue-500'
+            percentage > 90 ? "bg-red-500" : percentage > 70 ? "bg-yellow-500" : "bg-blue-500"
           }`}
           style={{ width: `${Math.min(percentage, 100)}%` }}
         />

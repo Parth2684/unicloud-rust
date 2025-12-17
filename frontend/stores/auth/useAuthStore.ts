@@ -7,7 +7,7 @@ export const useAuthStore = create<AuthState & AuthAction>((set, get) => ({
   authUser: null,
   isLoggedIn: false,
   token: null,
-  
+
   setUser: (user) => {
     set({ authUser: user, isLoggedIn: true });
   },
@@ -28,6 +28,4 @@ export const useAuthStore = create<AuthState & AuthAction>((set, get) => ({
       toast.error(e as string);
     }
   },
-  
-
 }));

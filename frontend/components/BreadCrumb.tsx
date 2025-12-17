@@ -1,5 +1,5 @@
-import { ChevronRight } from 'lucide-react';
-import { Fragment } from 'react';
+import { ChevronRight } from "lucide-react";
+import { Fragment } from "react";
 
 export const Breadcrumb: React.FC<{
   path: Map<string, string>;
@@ -18,9 +18,7 @@ export const Breadcrumb: React.FC<{
             {name}
           </button>
 
-          {index < entries.length - 1 && (
-            <ChevronRight className="w-4 h-4 text-gray-400" />
-          )}
+          {index < entries.length - 1 && <ChevronRight className="w-4 h-4 text-gray-400" />}
         </Fragment>
       ))}
     </div>

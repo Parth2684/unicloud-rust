@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useEffect, useState } from "react";
 import { DriveFile, SuccessCloudAccount } from "../stores/cloud/types";
@@ -8,9 +8,9 @@ import { CloudAccountCard } from "./CloudAccountCard";
 import { StorageBar } from "./StorageBar";
 import { Breadcrumb } from "./BreadCrumb";
 import { FileItem } from "./FileItem";
-import { useCloudStore } from '../stores/cloud/useCloudStore';
-import { useRouter } from 'next/navigation';
-import { BACKEND_URL } from '../lib/export';
+import { useCloudStore } from "../stores/cloud/useCloudStore";
+import { useRouter } from "next/navigation";
+import { BACKEND_URL } from "../lib/export";
 
 export const CloudFileExplorer = () => {
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
@@ -18,11 +18,12 @@ export const CloudFileExplorer = () => {
   const [selectedAccount, setSelectedAccount] = useState<SuccessCloudAccount | null>(null);
   const [breadcrumbPath, setBreadcrumbPath] = useState<Map<string, string>>(new Map());
   // const [files, setFiles] = useState<DriveFile[]>();
-  const { setClouds, successCloudAccounts, errorCloudAccounts, setCurrentGoogleFolder, drive } = useCloudStore()
+  const { setClouds, successCloudAccounts, errorCloudAccounts, setCurrentGoogleFolder, drive } =
+    useCloudStore();
   const handleAccountClick = (account: SuccessCloudAccount) => {
     setSelectedAccount(account);
     setCurrentView("drive");
-    setCurrentGoogleFolder(account.info.id, null)
+    setCurrentGoogleFolder(account.info.id, null);
     const newMap = new Map(breadcrumbPath);
     newMap.set(account.info.id, account.info.email);
     setBreadcrumbPath(newMap);
@@ -31,7 +32,7 @@ export const CloudFileExplorer = () => {
   const handleFileClick = (file: DriveFile, drive_id: string) => {
     if (isFolder(file.mimeType)) {
       const newMap = new Map(breadcrumbPath);
-      setCurrentGoogleFolder(drive_id, file.id)
+      setCurrentGoogleFolder(drive_id, file.id);
       newMap.set(file.id, file.name);
       setBreadcrumbPath(newMap);
     } else {
@@ -42,7 +43,7 @@ export const CloudFileExplorer = () => {
   const handleBreadcrumbNavigate = (id: string) => {
     const keys = Array.from(breadcrumbPath.keys());
     const newMap = new Map<string, string>();
-    
+
     for (const key of keys) {
       newMap.set(key, breadcrumbPath.get(key)!);
       if (key === id) break;
@@ -55,7 +56,7 @@ export const CloudFileExplorer = () => {
     const keys = Array.from(breadcrumbPath.keys());
 
     if (keys.length > 1) {
-      const parentKey = keys[keys.length - 2]; 
+      const parentKey = keys[keys.length - 2];
       handleBreadcrumbNavigate(parentKey);
     } else {
       setCurrentView("accounts");
@@ -63,13 +64,13 @@ export const CloudFileExplorer = () => {
       setBreadcrumbPath(new Map());
     }
   };
-  
-  const router = useRouter()
-  useEffect(() => {
-    setClouds()
-  },[])
 
-  const files = drive
+  const router = useRouter();
+  useEffect(() => {
+    setClouds();
+  }, []);
+
+  const files = drive;
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -118,23 +119,25 @@ export const CloudFileExplorer = () => {
           <div>
             <h2 className="text-2xl font-semibold mb-6">Cloud Accounts</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {successCloudAccounts && successCloudAccounts.map((account) => (
-                <CloudAccountCard
-                  key={account.info.id}
-                  account={account}
-                  onClick={() => handleAccountClick(account)}
-                />
-              ))}
-              
-              {errorCloudAccounts && errorCloudAccounts.map((account) => (
-                <CloudAccountCard
-                  key={account.id}
-                  account={account}
-                  onClick={() => {
-                    router.push(`${BACKEND_URL}/auth/google`)
-                  }}
-                />
-              ))}
+              {successCloudAccounts &&
+                successCloudAccounts.map((account) => (
+                  <CloudAccountCard
+                    key={account.info.id}
+                    account={account}
+                    onClick={() => handleAccountClick(account)}
+                  />
+                ))}
+
+              {errorCloudAccounts &&
+                errorCloudAccounts.map((account) => (
+                  <CloudAccountCard
+                    key={account.id}
+                    account={account}
+                    onClick={() => {
+                      router.push(`${BACKEND_URL}/auth/google`);
+                    }}
+                  />
+                ))}
             </div>
           </div>
         ) : (
@@ -159,25 +162,33 @@ export const CloudFileExplorer = () => {
                 </div>
               ) : viewMode === "grid" ? (
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                  {selectedAccount && files && files.map((file) => (
-                    <FileItem
-                      key={file.id}
-                      file={file}
-                      viewMode={viewMode}
-                      onClick={() => handleFileClick(file, selectedAccount.info.id)}
-                    />
-                  ))}
+                  {selectedAccount &&
+                    files &&
+                    files.map((file) => (
+                      <FileItem
+                        key={file.id}
+                        file={file}
+                        viewMode={viewMode}
+                        onClick={() => handleFileClick(file, selectedAccount.info.id)}
+                      />
+                    ))}
                 </div>
               ) : (
                 <div className="space-y-1">
-                  {selectedAccount && files &&  files.sort((a,b) => a.name.localeCompare(b.name, undefined, {sensitivity: 'base'})).map((file) => (
-                    <FileItem
-                      key={file.id}
-                      file={file}
-                      viewMode={viewMode}
-                      onClick={() => handleFileClick(file, selectedAccount.info.id)}
-                    />
-                  ))}
+                  {selectedAccount &&
+                    files &&
+                    files
+                      .sort((a, b) =>
+                        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+                      )
+                      .map((file) => (
+                        <FileItem
+                          key={file.id}
+                          file={file}
+                          viewMode={viewMode}
+                          onClick={() => handleFileClick(file, selectedAccount.info.id)}
+                        />
+                      ))}
                 </div>
               )}
             </div>

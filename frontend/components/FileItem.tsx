@@ -1,15 +1,15 @@
-import { ChevronRight, File, Folder } from 'lucide-react';
-import { DriveFile } from '../stores/cloud/types';
-import { formatBytes, isFolder } from '../utils/format';
+import { ChevronRight, File, Folder } from "lucide-react";
+import { DriveFile } from "../stores/cloud/types";
+import { formatBytes, isFolder } from "../utils/format";
 
 export const FileItem: React.FC<{
   file: DriveFile;
-  viewMode: 'grid' | 'list';
+  viewMode: "grid" | "list";
   onClick: () => void;
 }> = ({ file, viewMode, onClick }) => {
   const folder = isFolder(file.mimeType);
 
-  if (viewMode === 'grid') {
+  if (viewMode === "grid") {
     return (
       <button
         onClick={onClick}
@@ -21,7 +21,9 @@ export const FileItem: React.FC<{
           <File className="w-12 h-12 text-gray-400 mb-2" />
         )}
         <span className="text-sm text-center wrap-break-words w-full">{file.name}</span>
-        {file.size && <span className="text-xs text-gray-500 mt-1">{formatBytes(file.size.toString())}</span>}
+        {file.size && (
+          <span className="text-xs text-gray-500 mt-1">{formatBytes(file.size.toString())}</span>
+        )}
       </button>
     );
   }
