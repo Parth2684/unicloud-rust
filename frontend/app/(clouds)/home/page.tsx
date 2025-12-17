@@ -1,5 +1,5 @@
 import { BACKEND_URL } from "@/lib/export";
-import { CloudFileExplorer } from "../../../components/HomeComponent";
+import { HomeComponent } from '../../../components/HomeComponent';
 
 export default function Home() {
   return (
@@ -12,7 +12,7 @@ export default function Home() {
           Add Google Drive
         </a>
       </div>
-      <CloudFileExplorer />
+      <HomeComponent />
     </div>
   );
 }

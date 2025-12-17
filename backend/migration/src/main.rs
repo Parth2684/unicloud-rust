@@ -5,6 +5,7 @@ async fn main() {
     cli::run_cli(migration::Migrator).await;
 }
 
+// Install SeaOrm cli first with cargo install sea-orm-cli@^2.0.0-rc
 // To create a migration file sea-orm-cli migrate generate "name of migration"
 // To migrate database and reset schema sea-orm-cli migrate fresh
 // To migrate database sea-orm-cli migrate up
