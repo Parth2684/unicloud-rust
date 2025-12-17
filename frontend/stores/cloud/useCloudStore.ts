@@ -9,6 +9,7 @@ export const useCloudStore = create<CloudState & CloudActions>((set, get) => ({
   successCloudAccounts: null,
   errorCloudAccounts: null,
   drive: null,
+  sharedDrives: null,
 
   setClouds: async () => {
     set({ loading: true });
@@ -48,6 +49,20 @@ export const useCloudStore = create<CloudState & CloudActions>((set, get) => ({
         toast.error(error.response.data.message);
       } else {
         toast.error("Unexpected error fetching cloud accounts");
+      }
+    } finally {
+      set({ loading: false });
+    }
+  },
+  setSharedDrives: async (drive_id: string) => {
+    set({ loading: true });
+    try {
+      const res = await axiosInstance.get(`google/shared_drive/${drive_id}`);
+      set({ sharedDrives: res.data.drives });
+    } catch (error) {
+      console.error(error);
+      if (error instanceof AxiosError && error.response?.data) {
+        toast.error(error.response.data.message);
       }
     } finally {
       set({ loading: false });

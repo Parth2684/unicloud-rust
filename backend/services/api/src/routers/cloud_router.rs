@@ -15,6 +15,6 @@ pub fn cloud_router() -> Router {
             "/google/folder/{drive_id}/{folder_id}",
             get(google_get_folders),
         )
-        .route("/google/shared_drive", get(get_shared_drives))
+        .route("/google/shared_drive/{drive_id}", get(get_shared_drives))
         .layer(middleware::from_fn(auth_middleware))
 }
