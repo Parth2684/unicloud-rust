@@ -4,8 +4,13 @@ import { useCloudStore } from "../stores/cloud/useCloudStore";
 import { Spinner } from "./ui/spinner";
 import Link from "next/link";
 
-export const GoogleComponent = (drive_id: string) => {
+type GoogleComponentProps = {
+  drive_id: string;
+};
+
+export const GoogleComponent = (id: GoogleComponentProps) => {
   const { sharedDrives, setSharedDrives, loading } = useCloudStore();
+  const { drive_id } = id;
   useEffect(() => {
     setSharedDrives(drive_id);
   }, [drive_id]);

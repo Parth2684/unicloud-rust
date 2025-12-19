@@ -46,6 +46,6 @@ export type CloudState = {
 
 export type CloudActions = {
   setClouds: () => Promise<void>;
-  setCurrentGoogleFolder: (drive_id: string, folder_id?: string | null) => Promise<void>;
+  setCurrentGoogleFolder: (drive_id: string, folder_id?: string) => Promise<void>;
   setSharedDrives: (drive_id: string) => Promise<void>;
 };
