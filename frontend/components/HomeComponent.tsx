@@ -19,7 +19,7 @@ export const HomeComponent = () => {
       ) : successCloudAccounts && successCloudAccounts.length > 0 ? (
         successCloudAccounts.map((acc) => {
           return (
-            <Link href={`/drive/${acc.info.id}`} key={acc.info.id}>
+            <Link href={`/google/${acc.info.id}`} key={acc.info.id}>
               {JSON.stringify(acc)}
             </Link>
           );
