@@ -14,8 +14,10 @@ pub struct DriveFile {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct DriveListResponse {
     files: Vec<DriveFile>,
+    next_page_token: Option<String>,
 }
 
 pub async fn google_search_folder(
@@ -23,26 +25,39 @@ pub async fn google_search_folder(
     token: &str,
 ) -> Result<Vec<DriveFile>, reqwest::Error> {
     let client = Client::new();
-    let url = format!(
-        "https://www.googleapis.com/drive/v3/files\
-        ?q='{}' in parents and trashed=false\
-        &fields=files(id,name,mimeType,parents,size,createdTime,modifiedTime),nextPageToken\
-        &supportsAllDrives=true\
-        &includeItemsFromAllDrives=true\
-        &spaces=drive",
-        folder_id
-    );
-    let res = client.get(url).bearer_auth(token).send().await;
-    println!("{res:?}");
-    match res {
-        Err(err) => {
-            eprintln!("{err:?}");
-            return Err(err);
+    let mut all_files: Vec<DriveFile> = Vec::new();
+    let mut next_page_token: Option<String> = None;
+
+    loop {
+        let mut url = format!(
+            "https://www.googleapis.com/drive/v3/files\
+            ?q='{}' in parents and trashed=false\
+            &fields=files(id,name,mimeType,parents,size,createdTime,modifiedTime),nextPageToken\
+            &supportsAllDrives=true\
+            &includeItemsFromAllDrives=true\
+            &spaces=drive",
+            folder_id
+        );
+
+        if let Some(ref token) = next_page_token {
+            url.push_str(&format!("&pageToken={}", token));
         }
-        Ok(data) => {
-            println!("{data:?}");
-            let get_data = data.json::<DriveListResponse>().await?;
-            Ok(get_data.files)
+
+        let res = client
+            .get(url)
+            .bearer_auth(token)
+            .send()
+            .await?
+            .json::<DriveListResponse>()
+            .await?;
+
+        all_files.extend(res.files);
+
+        match res.next_page_token {
+            Some(token) => next_page_token = Some(token),
+            None => break,
         }
     }
+
+    Ok(all_files)
 }
