@@ -91,7 +91,7 @@ pub async fn handle_refresh(id: Uuid, db: &DatabaseConnection) -> bool {
                         Ok(json) => match json {
                             GoogleResult::Ok(res) => res,
                             GoogleResult::Err(err) => {
-                                println!("{err:?}");
+                                eprintln!("{err:?}");
                                 if err.error == "invalid_grant"
                                     && err.error_description == "Token has been expired or revoked."
                                 {

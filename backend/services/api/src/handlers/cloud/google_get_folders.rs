@@ -13,8 +13,7 @@ use uuid::Uuid;
 use crate::utils::{app_errors::AppError, google_search_folder::google_search_folder};
 
 pub async fn google_get_root(
-    Path(drive_id): Path<String>,
-    Extension(claims): Extension<Claims>,
+    Path(drive_id): Path<String>,    Extension(claims): Extension<Claims>,
 ) -> Result<impl IntoResponse, AppError> {
     let db = init_db().await;
     let drive_id = match Uuid::parse_str(&drive_id) {
@@ -72,7 +71,6 @@ pub async fn google_get_root(
                         }
                         Ok(res) => {
                             let res = res.json::<serde_json::Value>().await.unwrap();
-                            println!("{res:?}");
                             match res.get("id") {
                                 None => {
                                     return Err(AppError::NotFound(Some(String::from(
