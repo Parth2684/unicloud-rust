@@ -15,7 +15,7 @@ async fn main() {
 
     loop {
         let result: Result<Option<String>, RedisError> = redis_conn
-            .brpoplpush("refresh:queue", "refresh:queue", 1.0)
+            .brpoplpush("refresh:queue", "refresh:queue", 5.0)
             .await;
 
         let result = match result {

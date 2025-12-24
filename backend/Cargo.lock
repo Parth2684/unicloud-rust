@@ -3937,6 +3937,8 @@ dependencies = [
 name = "transfer-worker"
 version = "0.1.0"
 dependencies = [
+ "entities",
+ "redis",
  "serde",
 ]
 
