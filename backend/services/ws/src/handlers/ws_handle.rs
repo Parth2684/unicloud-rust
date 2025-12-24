@@ -32,7 +32,6 @@ pub async fn accept_connection(
     let callback = move |req: &Request, res: Response| {
         let url = req.uri();
         let full_url = format!("ws://localhost:8080{:?}", url);
-        println!("{full_url:?}");
         match Url::parse(&full_url) {
             Ok(parsed) => {
                 if let Ok(mut guard) = url_store.lock() {

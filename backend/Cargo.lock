@@ -139,6 +139,7 @@ dependencies = [
  "entities",
  "futures",
  "http",
+ "redis",
  "reqwest",
  "sea-orm",
  "serde",

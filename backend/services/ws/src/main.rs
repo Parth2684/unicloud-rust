@@ -1,5 +1,5 @@
 use crate::handlers::ws_handle::{PeerMap, accept_connection};
-use common::export_envs::ENVS;
+use common::{export_envs::ENVS, redis_connection::init_redis};
 use redis::aio::ConnectionManager;
 use std::{
     collections::HashMap,
@@ -17,9 +17,7 @@ async fn main() -> Result<(), Error> {
     let try_socket = TcpListener::bind(&addr).await;
     let listner = try_socket.expect("Failed to bind");
     println!("Listeneing on {:?}", addr);
-    let redis_url = &ENVS.redis_url.to_owned();
-    let redis_client = redis::Client::open(redis_url.as_str()).unwrap();
-    let manager = ConnectionManager::new(redis_client).await.unwrap();
+    let manager = init_redis().await;
     let redis = Arc::new(manager);
 
     while let Ok((stream, addr)) = listner.accept().await {

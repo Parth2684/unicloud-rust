@@ -7,3 +7,4 @@ tokio = { version = "1", features = ["full"] }
 entities = { path = "libs/entities" }
 common = { path = "libs/common" }
 serde = "1.0.228"
+redis = { version = "0.32.7", features = ["connection-manager", "tokio-comp"] }

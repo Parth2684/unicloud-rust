@@ -5,5 +5,5 @@ edition = "2024"
 
 [dependencies]
 serde.workspace = true
-redis = { version = "0.32.7", features = ["connection-manager", "tokio-comp"] }
+redis = { workspace = true }
 entities = { workspace = true }

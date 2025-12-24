@@ -19,7 +19,9 @@ export const GoogleComponent = ({ drive_id }: GoogleComponentProps) => {
   return (
     <div className="flex w-full flex-col gap-8 px-4 py-6 sm:px-8">
       <header className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 sm:text-2xl">Google Drive</h1>
+        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+          Google Drive
+        </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Open your personal drive or one of the shared drives linked to this Google account.
         </p>
@@ -44,7 +46,9 @@ export const GoogleComponent = ({ drive_id }: GoogleComponentProps) => {
                   <span className="text-base font-semibold">G</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">My Drive</span>
+                  <span className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                    My Drive
+                  </span>
                   <span className="text-xs text-zinc-500 dark:text-zinc-400">Personal files</span>
                 </div>
               </div>
@@ -91,7 +95,9 @@ const SharedDriveRow = ({ drive }: SharedDriveRowProps) => {
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300">
           <span className="text-base font-semibold">S</span>
         </div>
-        <span className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">{drive.name}</span>
+        <span className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+          {drive.name}
+        </span>
       </div>
       <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Open</span>
     </Link>

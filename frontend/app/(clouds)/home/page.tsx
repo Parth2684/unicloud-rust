@@ -1,5 +1,5 @@
 import { BACKEND_URL } from "@/lib/export";
-import { HomeComponent } from '../../../components/HomeComponent';
+import { HomeComponent } from "../../../components/HomeComponent";
 
 export default function Home() {
   return (

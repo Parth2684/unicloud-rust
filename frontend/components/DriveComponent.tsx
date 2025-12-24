@@ -23,7 +23,9 @@ export const DriveComponent = ({ drive_id, folder_id }: DriveComponentProps) => 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col gap-4 px-4 py-4 sm:px-8 sm:py-6">
       <header className="flex flex-col gap-1">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 sm:text-2xl">{title}</h1>
+        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+          {title}
+        </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Browse your files and folders. Click a folder name to open it.
         </p>
@@ -31,7 +33,10 @@ export const DriveComponent = ({ drive_id, folder_id }: DriveComponentProps) => 
 
       <div className="flex items-center justify-between gap-3 text-xs text-zinc-500 dark:text-zinc-400">
         <div className="flex items-center gap-1">
-          <Link href={`/drive/${drive_id}`} className="font-medium text-zinc-700 hover:underline dark:text-zinc-200">
+          <Link
+            href={`/drive/${drive_id}`}
+            className="font-medium text-zinc-700 hover:underline dark:text-zinc-200"
+          >
             My Drive
           </Link>
           {folder_id && <span className="text-zinc-400">/</span>}
@@ -103,8 +108,12 @@ const FileRow = ({ driveId, item }: FileRowProps) => {
         </div>
         <span className="truncate">{item.name}</span>
       </div>
-      <div className="text-right text-xs text-zinc-500 sm:text-left sm:pl-4 dark:text-zinc-400">{sizeLabel}</div>
-      <div className="hidden text-right text-xs text-zinc-500 sm:block dark:text-zinc-400">{modifiedLabel}</div>
+      <div className="text-right text-xs text-zinc-500 sm:text-left sm:pl-4 dark:text-zinc-400">
+        {sizeLabel}
+      </div>
+      <div className="hidden text-right text-xs text-zinc-500 sm:block dark:text-zinc-400">
+        {modifiedLabel}
+      </div>
     </div>
   );
 

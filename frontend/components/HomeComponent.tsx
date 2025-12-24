@@ -15,9 +15,12 @@ export const HomeComponent = () => {
   return (
     <div className="flex w-full flex-col gap-8 px-4 py-6 sm:px-8">
       <header className="flex flex-col gap-2">
-        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 sm:text-2xl">Cloud accounts</h1>
+        <h1 className="text-xl font-semibold text-zinc-900 dark:text-zinc-50 sm:text-2xl">
+          Cloud accounts
+        </h1>
         <p className="text-sm text-zinc-500 dark:text-zinc-400">
-          Choose a linked cloud account to open its drive. Storage usage and provider are shown below.
+          Choose a linked cloud account to open its drive. Storage usage and provider are shown
+          below.
         </p>
       </header>
 
@@ -116,7 +119,7 @@ type ErrorAccountCardProps = {
 };
 
 const ErrorAccountCard = ({ account }: ErrorAccountCardProps) => {
-  const providerLabel = account.provider === Provider.Google ? "Google Drive" : "Mega";
+  const providerLabel = account.provider;
 
   return (
     <Link
