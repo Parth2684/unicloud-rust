@@ -7,6 +7,7 @@ mod m20251105_154841_add_sub_field_to_cloud_account;
 mod m20251111_155841_user_to_users;
 mod m20251126_165431_add_refresh_token_expired_field_to_cloud_accounts;
 mod m20251210_150222_add_image_to_cloud_account;
+mod m20251225_162600_add_transfer_table;
 
 pub struct Migrator;
 
@@ -21,6 +22,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20251111_155841_user_to_users::Migration),
             Box::new(m20251126_165431_add_refresh_token_expired_field_to_cloud_accounts::Migration),
             Box::new(m20251210_150222_add_image_to_cloud_account::Migration),
+            Box::new(m20251225_162600_add_transfer_table::Migration),
         ]
     }
 }
