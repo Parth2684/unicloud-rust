@@ -6,10 +6,15 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use common::{db_connect::init_db, jwt_config::Claims, redis_connection::init_redis};
-use entities::cloud_account::{Column as CloudAccountColumn, Entity as CloudAccountEntity};
+use common::{
+    db_connect::init_db, encrypt::decrypt, jwt_config::Claims, redis_connection::init_redis,
+};
+use entities::{cloud_account::{
+    ActiveModel as CloudAccountActive, Column as CloudAccountColumn, Entity as CloudAccountEntity,
+}, sea_orm_active_enums::Status};
 use entities::job::ActiveModel as JobActive;
 use redis::AsyncTypedCommands;
+use reqwest::Client;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 use serde::Deserialize;
 use serde_json::json;
@@ -21,16 +26,22 @@ use crate::utils::app_errors::AppError;
 pub struct CopyInputs {
     from_drive: String,
     from_file_id: String,
-    is_folder: bool,
     to_drive: String,
     to_folder_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FileDetail {
+    mime_type: String,
+    size: Option<String>,
 }
 
 pub async fn copy_file_or_folder(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CopyInputs>,
 ) -> Result<Response, AppError> {
-    let (mut redis_conn, db) = tokio::join!(init_redis(), init_db(),);
+    let (mut redis_conn, db) = tokio::join!(init_redis(), init_db());
 
     let from_uuid = Uuid::from_str(&payload.from_drive);
     let to_uuid = Uuid::from_str(&payload.to_drive);
@@ -117,55 +128,115 @@ pub async fn copy_file_or_folder(
                                 destination_acc.email
                             )))));
                         }
-                        let id = Uuid::new_v4();
-                        let insert_job = JobActive::insert(
-                            {
-                                JobActive {
-                                    id: Set(id),
-                                    from_drive: Set(source_acc.id),
-                                    from_file_id: Set(payload.from_file_id.clone()),
-                                    is_folder: Set(payload.is_folder.clone()),
-                                    to_drive: Set(destination_acc.id),
-                                    to_folder_id: Set(payload.to_folder_id.clone()),
-                                    user_id: Set(claims.id),
-                                    ..Default::default()
-                                }
-                            },
-                            db,
-                        )
-                        .await;
-
-                        match insert_job {
+                        match decrypt(&source_acc.access_token) {
                             Err(err) => {
-                                eprintln!("error creating task: {err:?}");
+                                eprintln!("Error decrypting access token: {:?}", err);
+                                let mut source_active: CloudAccountActive = source_acc.into();
+                                source_active.token_expired = Set(true);
+                                source_active.update(db).await.ok();
                                 return Err(AppError::Internal(Some(String::from(
-                                    "Error creating task",
+                                    "Error decrypting access token please refresh your account",
                                 ))));
                             }
-                            Ok(job) => {
-                                match redis_conn
-                                    .lpush("copy-google:job", job.id.to_string())
-                                    .await
-                                {
-                                    Err(err) => {
-                                        eprintln!("error pushing to redis queue: {err:?}");
-                                        return Err(AppError::Internal(Some(
-                                            "Error pushing to job queue".into(),
-                                        )));
-                                    }
-                                    Ok(_) => {
-                                        return Ok((
-                                            StatusCode::OK,
-                                            axum::Json(json!({
-                                                "message": "Task added successfully",
+                            Ok(token) => {
+                                let client = Client::new();
+                                let res = client
+                                    .get(format!("https://www.googleapis.com/drive/v3/files?q='{}' in parents and trashed=false&fields=mimeType,size&supportsAllDrives=true&includeItemsFromAllDrives=true&spaces=drive", &payload.from_file_id))
+                                    .bearer_auth(token)
+                                    .send()
+                                    .await;
 
-                                            })),
-                                        )
-                                            .into_response());
+                                match res {
+                                    Err(err) => {
+                                        eprintln!(
+                                            "error receiving response from derive api: {:?}",
+                                            err
+                                        );
+                                        return Err(AppError::BadGateway(Some(String::from(
+                                            "Error receiving details of files from google",
+                                        ))));
                                     }
-                                };
+                                    Ok(response) => match response.json::<FileDetail>().await {
+                                        Err(err) => {
+                                            eprintln!(
+                                                "error parsing response from google: {:?}",
+                                                err
+                                            );
+                                            return Err(AppError::BadGateway(Some(String::from(
+                                                "Error Parsing response from google",
+                                            ))));
+                                        }
+                                        Ok(details) => {
+                                            let is_folder = details.mime_type
+                                                == String::from(
+                                                    "application/vnd.google-apps.folder",
+                                                );
+                                            let size_i64: Option<i64> = details
+                                                .size
+                                                .as_deref()
+                                                .and_then(|s| s.parse::<i64>().ok());
+
+                                            let id = Uuid::new_v4();
+
+                                            let insert_job = JobActive::insert(
+                                                JobActive {
+                                                    id: Set(id),
+                                                    from_drive: Set(source_acc.id),
+                                                    from_file_id: Set(payload.from_file_id.clone()),
+                                                    is_folder: Set(is_folder),
+                                                    to_drive: Set(destination_acc.id),
+                                                    to_folder_id: Set(payload.to_folder_id.clone()),
+                                                    user_id: Set(claims.id),
+                                                    size: Set(size_i64),
+                                                    ..Default::default()
+                                                },
+                                                db,
+                                            )
+                                            .await;
+
+                                            match insert_job {
+                                                Err(err) => {
+                                                    eprintln!("error creating task: {err:?}");
+                                                    return Err(AppError::Internal(Some(
+                                                        String::from("Error creating task"),
+                                                    )));
+                                                }
+                                                Ok(job) => {
+                                                    match redis_conn
+                                                        .lpush(
+                                                            "copy-google:job",
+                                                            job.id.to_string(),
+                                                        )
+                                                        .await
+                                                    {
+                                                        Err(err) => {
+                                                            eprintln!(
+                                                                "error pushing to redis queue: {err:?}"
+                                                            );
+                                                            let mut edit_job: JobActive = job.into();
+                                                            edit_job.status = Set(Status::Failed);
+                                                            edit_job.update(db).await.ok();
+                                                            return Err(AppError::Internal(Some(
+                                                                "Error pushing to job queue".into(),
+                                                            )));
+                                                        }
+                                                        Ok(_) => {
+                                                            return Ok((
+                                                                    StatusCode::OK,
+                                                                    axum::Json(json!({
+                                                                        "message": "Task added successfully",
+                                                                    })),
+                                                                )
+                                                                    .into_response());
+                                                        }
+                                                    };
+                                                }
+                                            }
+                                        }
+                                    },
+                                }
                             }
-                        }
+                        };
                     }
                 },
             }

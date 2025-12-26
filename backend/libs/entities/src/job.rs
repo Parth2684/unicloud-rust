@@ -17,6 +17,7 @@ pub struct Model {
     pub created_at: DateTime,
     pub status: Status,
     pub user_id: Uuid,
+    pub size: Option<i64>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

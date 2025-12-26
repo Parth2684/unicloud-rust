@@ -22,6 +22,6 @@ pub fn cloud_router() -> Router {
             get(google_get_folders),
         )
         .route("/google/shared_drive/{drive_id}", get(get_shared_drives))
-        .route("/google/copy", post(copy_file_or_folder))
+        .route("/google/google-copy", post(copy_file_or_folder))
         .layer(middleware::from_fn(auth_middleware))
 }

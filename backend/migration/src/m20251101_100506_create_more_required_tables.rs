@@ -74,6 +74,7 @@ impl MigrationTrait for Migration {
                     .to_owned(),
             )
             .await?;
+        let five_gb: i64 = 5368709120;
         manager
             .create_table(
                 Table::create()
@@ -89,33 +90,33 @@ impl MigrationTrait for Migration {
                     .col(ColumnDef::new(Quota::UserId).uuid().not_null().unique_key())
                     .col(
                         ColumnDef::new(Quota::FreeQuota)
-                            .float()
+                            .big_integer()
                             .not_null()
-                            .default(5.0),
+                            .default(five_gb),
                     )
                     .col(
                         ColumnDef::new(Quota::AddOnQuota)
-                            .float()
+                            .big_integer()
                             .not_null()
-                            .default(0.0),
+                            .default(0),
                     )
                     .col(
                         ColumnDef::new(Quota::TotalQuota)
-                            .float()
+                            .big_integer()
                             .not_null()
-                            .default(5.0),
+                            .default(0),
                     )
                     .col(
                         ColumnDef::new(Quota::UsedQuota)
-                            .float()
+                            .big_integer()
                             .not_null()
-                            .default(0.0),
+                            .default(0),
                     )
                     .col(
                         ColumnDef::new(Quota::RemainingQuota)
-                            .float()
+                            .big_integer()
                             .not_null()
-                            .default(5.0),
+                            .default(0),
                     )
                     .col(
                         ColumnDef::new(Quota::QuotaType)

@@ -4,7 +4,7 @@ use super::sea_orm_active_enums::QuotaType;
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "quota")]
 #[sea_orm::model]
 pub struct Model {
@@ -13,15 +13,15 @@ pub struct Model {
     #[sea_orm(unique)]
     pub user_id: Uuid,
     #[sea_orm(column_type = "Float")]
-    pub free_quota: f32,
+    pub free_quota: i64,
     #[sea_orm(column_type = "Float")]
-    pub add_on_quota: f32,
+    pub add_on_quota: i64,
     #[sea_orm(column_type = "Float")]
-    pub total_quota: f32,
+    pub total_quota: i64,
     #[sea_orm(column_type = "Float")]
-    pub used_quota: f32,
+    pub used_quota: i64,
     #[sea_orm(column_type = "Float")]
-    pub remaining_quota: f32,
+    pub remaining_quota: i64,
     pub quota_type: QuotaType,
 }
 

@@ -10,6 +10,7 @@ pub enum AppError {
     Internal(Option<String>),
     Forbidden(Option<String>),
     UnprocessableEntry(Option<String>),
+    BadGateway(Option<String>)
 }
 
 impl IntoResponse for AppError {
@@ -59,6 +60,16 @@ impl IntoResponse for AppError {
                 let message = msg.unwrap_or_else(|| String::from("Unprocessable Entry"));
                 (
                     StatusCode::UNPROCESSABLE_ENTITY,
+                    Json(json!({
+                        "message": message
+                    })),
+                )
+                    .into_response()
+            }
+            AppError::BadGateway(msg) => {
+                let message = msg.unwrap_or_else(|| String::from("Bad Gateway"));
+                (
+                    StatusCode::BAD_GATEWAY,
                     Json(json!({
                         "message": message
                     })),

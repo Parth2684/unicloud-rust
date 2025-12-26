@@ -57,6 +57,7 @@ impl MigrationTrait for Migration {
                             .default("Pending"),
                     )
                     .col(ColumnDef::new(Job::UserId).uuid().not_null())
+                    .col(ColumnDef::new(Job::Size).big_integer())
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-job-user-id")
@@ -99,6 +100,7 @@ enum Job {
     CreatedAt,
     UserId,
     Status,
+    Size
 }
 
 #[derive(DeriveIden)]
