@@ -33,7 +33,12 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(Job::FromDrive).uuid().not_null())
                     .col(ColumnDef::new(Job::FromFileId).string().not_null())
-                    .col(ColumnDef::new(Job::IsFolder).boolean().default(false))
+                    .col(
+                        ColumnDef::new(Job::IsFolder)
+                            .boolean()
+                            .default(false)
+                            .not_null(),
+                    )
                     .col(ColumnDef::new(Job::ToDrive).uuid().not_null())
                     .col(ColumnDef::new(Job::ToFolderId).string().not_null())
                     .col(

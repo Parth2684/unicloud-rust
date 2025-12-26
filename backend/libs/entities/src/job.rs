@@ -11,7 +11,7 @@ pub struct Model {
     pub id: Uuid,
     pub from_drive: Uuid,
     pub from_file_id: String,
-    pub is_folder: Option<bool>,
+    pub is_folder: bool,
     pub to_drive: Uuid,
     pub to_folder_id: String,
     pub created_at: DateTime,

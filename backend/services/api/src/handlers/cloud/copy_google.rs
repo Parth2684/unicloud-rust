@@ -8,8 +8,9 @@ use axum::{
 };
 use common::{db_connect::init_db, jwt_config::Claims, redis_connection::init_redis};
 use entities::cloud_account::{Column as CloudAccountColumn, Entity as CloudAccountEntity};
+use entities::job::ActiveModel as JobActive;
 use redis::AsyncTypedCommands;
-use sea_orm::{ColumnTrait, EntityTrait, QueryFilter, QuerySelect};
+use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
 use serde::Deserialize;
 use serde_json::json;
 use uuid::Uuid;
@@ -17,7 +18,7 @@ use uuid::Uuid;
 use crate::utils::app_errors::AppError;
 
 #[derive(Deserialize)]
-struct CopyInputs {
+pub struct CopyInputs {
     from_drive: String,
     from_file_id: String,
     is_folder: bool,
@@ -29,7 +30,7 @@ pub async fn copy_file_or_folder(
     Extension(claims): Extension<Claims>,
     Json(payload): Json<CopyInputs>,
 ) -> Result<Response, AppError> {
-    let (redis_conn, db) = tokio::join!(init_redis(), init_db(),);
+    let (mut redis_conn, db) = tokio::join!(init_redis(), init_db(),);
 
     let from_uuid = Uuid::from_str(&payload.from_drive);
     let to_uuid = Uuid::from_str(&payload.to_drive);
@@ -116,18 +117,58 @@ pub async fn copy_file_or_folder(
                                 destination_acc.email
                             )))));
                         }
+                        let id = Uuid::new_v4();
+                        let insert_job = JobActive::insert(
+                            {
+                                JobActive {
+                                    id: Set(id),
+                                    from_drive: Set(source_acc.id),
+                                    from_file_id: Set(payload.from_file_id.clone()),
+                                    is_folder: Set(payload.is_folder.clone()),
+                                    to_drive: Set(destination_acc.id),
+                                    to_folder_id: Set(payload.to_folder_id.clone()),
+                                    user_id: Set(claims.id),
+                                    ..Default::default()
+                                }
+                            },
+                            db,
+                        )
+                        .await;
+
+                        match insert_job {
+                            Err(err) => {
+                                eprintln!("error creating task: {err:?}");
+                                return Err(AppError::Internal(Some(String::from(
+                                    "Error creating task",
+                                ))));
+                            }
+                            Ok(job) => {
+                                match redis_conn
+                                    .lpush("copy-google:job", job.id.to_string())
+                                    .await
+                                {
+                                    Err(err) => {
+                                        eprintln!("error pushing to redis queue: {err:?}");
+                                        return Err(AppError::Internal(Some(
+                                            "Error pushing to job queue".into(),
+                                        )));
+                                    }
+                                    Ok(_) => {
+                                        return Ok((
+                                            StatusCode::OK,
+                                            axum::Json(json!({
+                                                "message": "Task added successfully",
+
+                                            })),
+                                        )
+                                            .into_response());
+                                    }
+                                };
+                            }
+                        }
                     }
                 },
             }
         }
     }
-
-    Ok((
-        StatusCode::OK,
-        axum::Json(json!({
-            "message": "Task added successfully",
-
-        })),
-    )
-        .into_response())
 }
