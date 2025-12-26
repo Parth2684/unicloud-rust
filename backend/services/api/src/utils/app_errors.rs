@@ -10,7 +10,7 @@ pub enum AppError {
     Internal(Option<String>),
     Forbidden(Option<String>),
     UnprocessableEntry(Option<String>),
-    BadGateway(Option<String>)
+    BadGateway(Option<String>),
 }
 
 impl IntoResponse for AppError {

@@ -100,7 +100,7 @@ enum Job {
     CreatedAt,
     UserId,
     Status,
-    Size
+    Size,
 }
 
 #[derive(DeriveIden)]

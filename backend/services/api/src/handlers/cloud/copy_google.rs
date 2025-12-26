@@ -9,10 +9,14 @@ use axum::{
 use common::{
     db_connect::init_db, encrypt::decrypt, jwt_config::Claims, redis_connection::init_redis,
 };
-use entities::{cloud_account::{
-    ActiveModel as CloudAccountActive, Column as CloudAccountColumn, Entity as CloudAccountEntity,
-}, sea_orm_active_enums::Status};
 use entities::job::ActiveModel as JobActive;
+use entities::{
+    cloud_account::{
+        ActiveModel as CloudAccountActive, Column as CloudAccountColumn,
+        Entity as CloudAccountEntity,
+    },
+    sea_orm_active_enums::Status,
+};
 use redis::AsyncTypedCommands;
 use reqwest::Client;
 use sea_orm::{ActiveModelTrait, ActiveValue::Set, ColumnTrait, EntityTrait, QueryFilter};
@@ -213,7 +217,8 @@ pub async fn copy_file_or_folder(
                                                             eprintln!(
                                                                 "error pushing to redis queue: {err:?}"
                                                             );
-                                                            let mut edit_job: JobActive = job.into();
+                                                            let mut edit_job: JobActive =
+                                                                job.into();
                                                             edit_job.status = Set(Status::Failed);
                                                             edit_job.update(db).await.ok();
                                                             return Err(AppError::Internal(Some(
