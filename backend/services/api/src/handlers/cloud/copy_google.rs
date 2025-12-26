@@ -145,7 +145,10 @@ pub async fn copy_file_or_folder(
                             Ok(token) => {
                                 let client = Client::new();
                                 let res = client
-                                    .get(format!("https://www.googleapis.com/drive/v3/files?q='{}' in parents and trashed=false&fields=mimeType,size&supportsAllDrives=true&includeItemsFromAllDrives=true&spaces=drive", &payload.from_file_id))
+                                    .get(format!(
+                                      "https://www.googleapis.com/drive/v3/files/{}?fields=mimeType,size&supportsAllDrives=true",
+                                      payload.from_file_id
+                                    ))
                                     .bearer_auth(token)
                                     .send()
                                     .await;
