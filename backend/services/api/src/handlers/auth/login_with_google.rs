@@ -300,7 +300,7 @@ pub async fn google_auth_callback(
         .secure(secure)
         .expires(expiry_time);
 
-    if &ENVS.environment == "production" {
+    if &ENVS.environment == "PRODUCTION" {
         if let Some(x) = &ENVS.domain {
             cookie = cookie.domain(x);
         }

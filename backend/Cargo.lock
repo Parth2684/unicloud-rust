@@ -4010,9 +4010,12 @@ dependencies = [
 name = "transfer-worker"
 version = "0.1.0"
 dependencies = [
+ "common",
  "entities",
  "redis",
+ "sea-orm",
  "serde",
+ "tokio",
 ]
 
 [[package]]

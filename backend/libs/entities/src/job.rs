@@ -23,7 +23,7 @@ pub struct Model {
     pub size: Option<i64>,
     pub link: Option<String>,
     pub link_type: Option<LinkType>,
-    pub transfer_type: Option<TransferType>,
+    pub transfer_type: TransferType,
     #[sea_orm(
         belongs_to,
         relation_enum = "CloudAccount2",

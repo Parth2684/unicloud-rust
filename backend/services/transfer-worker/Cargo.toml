@@ -7,3 +7,6 @@ edition = "2024"
 serde.workspace = true
 redis = { workspace = true }
 entities = { workspace = true }
+common = { workspace = true }
+tokio = { workspace = true }
+sea-orm = { version = "2.0.0-rc.16", features = [ "sqlx-postgres", "runtime-async-std-native-tls", "macros" ] }

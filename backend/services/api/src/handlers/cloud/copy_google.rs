@@ -212,7 +212,7 @@ pub async fn copy_file_or_folder(
                                                 Ok(job) => {
                                                     match redis_conn
                                                         .lpush(
-                                                            "copy-google:job",
+                                                            "copy:job",
                                                             job.id.to_string(),
                                                         )
                                                         .await
