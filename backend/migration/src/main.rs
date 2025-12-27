@@ -9,4 +9,4 @@ async fn main() {
 // To create a migration file sea-orm-cli migrate generate "name of migration"
 // To migrate database and reset schema sea-orm-cli migrate fresh
 // To migrate database sea-orm-cli migrate up
-// To generate entities sea-orm-cli generate entity -o libs/entities/src --with-serde both --lib
+// To generate entities sea-orm-cli generate entity -o libs/entities/src --with-serde both --lib --entity-format dense

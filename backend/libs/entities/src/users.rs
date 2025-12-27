@@ -3,6 +3,7 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[sea_orm::model]
 #[derive(Clone, Debug, PartialEq, Eq, DeriveEntityModel, Serialize, Deserialize)]
 #[sea_orm(table_name = "users")]
 pub struct Model {
@@ -15,34 +16,12 @@ pub struct Model {
     pub image: Option<String>,
     #[sea_orm(unique)]
     pub sub: String,
-}
-
-#[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
-pub enum Relation {
-    #[sea_orm(has_many = "super::cloud_account::Entity")]
-    CloudAccount,
-    #[sea_orm(has_many = "super::job::Entity")]
-    Job,
-    #[sea_orm(has_one = "super::quota::Entity")]
-    Quota,
-}
-
-impl Related<super::cloud_account::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::CloudAccount.def()
-    }
-}
-
-impl Related<super::job::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Job.def()
-    }
-}
-
-impl Related<super::quota::Entity> for Entity {
-    fn to() -> RelationDef {
-        Relation::Quota.def()
-    }
+    #[sea_orm(has_many)]
+    pub cloud_accounts: HasMany<super::cloud_account::Entity>,
+    #[sea_orm(has_many)]
+    pub jobs: HasMany<super::job::Entity>,
+    #[sea_orm(has_one)]
+    pub quota: HasOne<super::quota::Entity>,
 }
 
 impl ActiveModelBehavior for ActiveModel {}

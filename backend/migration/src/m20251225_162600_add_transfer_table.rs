@@ -1,6 +1,6 @@
 use sea_orm_migration::{
     prelude::{extension::postgres::Type, *},
-    schema::*,
+    schema::*, sea_orm::EnumIter,
 };
 
 #[derive(DeriveMigrationName)]
@@ -14,11 +14,28 @@ impl MigrationTrait for Migration {
             .create_type(
                 Type::create()
                     .as_enum(Status::Table)
-                    .values(["Pending", "Running", "Completed", "Failed"])
+                    .values([Status::Pending, Status::Running, Status::Completed, Status::Failed])
                     .to_owned(),
             )
             .await?;
 
+        manager
+            .create_type(
+                Type::create()
+                    .as_enum(TransferType::Table)
+                    .values([TransferType::GoogleToGoogle, TransferType::MegaToGoogle])
+                    .to_owned(),
+            )
+            .await?;
+        
+        manager
+            .create_type(Type::create()
+                .as_enum(LinkType::Table)
+                .values([LinkType::Torrent])
+                .to_owned()
+            )
+            .await?;
+        
         manager
             .create_table(
                 Table::create()
@@ -31,14 +48,9 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .unique_key(),
                     )
-                    .col(ColumnDef::new(Job::FromDrive).uuid().not_null())
-                    .col(ColumnDef::new(Job::FromFileId).string().not_null())
-                    .col(
-                        ColumnDef::new(Job::IsFolder)
-                            .boolean()
-                            .default(false)
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Job::FromDrive).uuid())
+                    .col(ColumnDef::new(Job::FromFileId).string())
+                    .col(ColumnDef::new(Job::IsFolder).boolean().default(false))
                     .col(ColumnDef::new(Job::ToDrive).uuid().not_null())
                     .col(ColumnDef::new(Job::ToFolderId).string().not_null())
                     .col(
@@ -51,13 +63,23 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Job::Status)
                             .enumeration(
                                 Status::Table,
-                                ["Pending", "Running", "Completed", "Failed"],
+                                [Status::Pending, Status::Running, Status::Completed, Status::Failed],
                             )
                             .not_null()
-                            .default("Pending"),
+                            .default(Expr::cust("'pending'")),
                     )
                     .col(ColumnDef::new(Job::UserId).uuid().not_null())
                     .col(ColumnDef::new(Job::Size).big_integer())
+                    .col(ColumnDef::new(Job::Link).string())
+                    .col(ColumnDef::new(Job::LinkType)
+                        .enumeration(LinkType::Table, 
+                        [LinkType::Torrent]
+                        )
+                    )
+                    .col(ColumnDef::new(Job::TransferType)
+                        .enumeration(TransferType::Table, [TransferType::GoogleToGoogle, TransferType::MegaToGoogle])
+                        .not_null()
+                    )
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-job-user-id")
@@ -101,6 +123,9 @@ enum Job {
     UserId,
     Status,
     Size,
+    Link,
+    LinkType,
+    TransferType
 }
 
 #[derive(DeriveIden)]
@@ -115,7 +140,24 @@ enum CloudAccount {
     Id,
 }
 
-#[derive(DeriveIden)]
+#[derive(DeriveIden, EnumIter)]
 enum Status {
     Table,
+    Pending,
+    Running,
+    Completed,
+    Failed
+}
+
+#[derive(DeriveIden)]
+enum TransferType {
+    Table,
+    GoogleToGoogle,
+    MegaToGoogle,
+}
+
+#[derive(DeriveIden)]
+enum LinkType {
+    Table,
+    Torrent,
 }
